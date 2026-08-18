@@ -1,6 +1,7 @@
 """FastAPI router for marketing campaign mock API."""
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import time
@@ -331,7 +332,29 @@ def _build_template_detail_payload(
 ) -> list[dict[str, Any]]:
     plates = _load_json_like_rows(_TEMPLATE_DETAIL_SAMPLE_PATH)
     _inject_campaign_values(plates, act_nos)
+    _rewrite_multi_activity_plates(plates, act_nos)
     return plates
+
+
+def _rewrite_multi_activity_plates(plates: list[dict[str, Any]], act_nos: list[str]) -> None:
+    """Rewrite multi-activity comparison plates to reference the requested campaigns.
+
+    The sample response file hardcodes two demo activities in its multi-activity
+    plates (plateTypeCd == "4"). Replace those plates' indicators with rows built
+    from the requested actNos, using real campaign names from the Excel data
+    source so generated reports never show the demo activities.
+    """
+    if not act_nos:
+        return
+    records = _select_campaign_records(act_nos)
+    activities = _resolve_activity_refs([str(act_no) for act_no in act_nos], records)
+    for plate in plates:
+        if str(plate.get("plateTypeCd") or "") != "4":
+            continue
+        if isinstance(plate.get("plateShowIndCfgInfDtoList"), list):
+            plate["plateShowIndCfgInfDtoList"] = copy.deepcopy(
+                _multi_activity_indicators(activities, records)
+            )
 
 
 def _inject_campaign_values(plates: list[dict[str, Any]], act_nos: list[str]) -> None:
@@ -608,6 +631,11 @@ def _select_campaign_records(act_nos: list[str]) -> list[dict[str, Any]]:
 
 def _resolve_activity_refs(act_nos: list[str], records: list[dict[str, Any]]) -> list[dict[str, str]]:
     by_id = {str(record.get("活动编号") or ""): record for record in records}
+    # 活动搜索样例报文中的活动（PV 开头）不在 Excel 数据源里，名称需从这里取。
+    sample_names = {
+        str(row.get("actNo") or ""): str(row.get("actName") or "")
+        for row in _load_json_rows(_ACTIVITY_SAMPLE_PATH)
+    }
     activities = []
     for act_no in act_nos:
         act_no = str(act_no)
@@ -617,6 +645,7 @@ def _resolve_activity_refs(act_nos: list[str], records: list[dict[str, Any]]) ->
                 "act_no": act_no,
                 "actName": str(
                     (record or {}).get("活动名称")
+                    or sample_names.get(act_no)
                     or _SAMPLE_ACTIVITY_NAMES.get(act_no)
                     or f"活动{act_no[-6:]}"
                 ),

@@ -1868,16 +1868,6 @@ async function resolveApproval(message, decision, editedArgs = null) {
   }
 }
 
-function originalUserQuestion(conversation = activeConversation.value) {
-  const message = (conversation?.dynamicMessages || []).find((item) => (
-    item.role === 'user'
-    && typeof item.text === 'string'
-    && item.text.trim()
-    && !(item.text.trim().startsWith('已选择第') && item.text.includes('行'))
-  ));
-  return message?.text?.trim() || '';
-}
-
 function triggerFileUpload() {
   if (activeConversation.value?.typing || uploadingFile.value) return;
   uploadError.value = '';
@@ -2809,7 +2799,10 @@ async function sendMsg() {
     const response = await runAgentV2({
       threadId: conversation.id,
       message: requestText,
-      originalUserText: originalUserQuestion(conversation) || requestText,
+      // originalUserText 是“本轮”用户消息的展示文本（刷新后按它重建气泡），
+      // 必须随轮次变化；曾误用 originalUserQuestion（恒为会话第一个问题），
+      // 导致刷新后每轮用户气泡都显示成第一个问题。
+      originalUserText: displayText || requestText,
       filePath: currentUploadedFile?.file_path || '',
       userId: urlUserId || getUserId(),
       userName: urlUserName,
