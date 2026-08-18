@@ -18,6 +18,7 @@ def test_build_model_config_prefers_main_role(monkeypatch):
         agent_v2_main_llm_api_key="k1", agent_v2_main_llm_base_url="https://main",
         agent_v2_main_llm_model="m1",
         llm_api_key="gk", llm_base_url="https://global", llm_model="gm",
+        llm_verify_ssl=False,
     )
     client_cfg, request_cfg = agent_factory.build_v3_model_configs(settings)
     assert client_cfg.api_key == "k1"
@@ -30,6 +31,7 @@ def test_build_model_config_falls_back_to_global(monkeypatch):
         agent_v2_main_llm_api_key="", agent_v2_main_llm_base_url="",
         agent_v2_main_llm_model="",
         llm_api_key="gk", llm_base_url="https://global", llm_model="gm",
+        llm_verify_ssl=False,
     )
     client_cfg, request_cfg = agent_factory.build_v3_model_configs(settings)
     assert client_cfg.api_key == "gk"
@@ -41,6 +43,7 @@ async def test_get_v3_agent_registers_tools_and_rails(monkeypatch):
         agent_v2_main_llm_api_key="", agent_v2_main_llm_base_url="",
         agent_v2_main_llm_model="",
         llm_api_key="k", llm_base_url="https://x", llm_model="m",
+        llm_verify_ssl=False,
         agent_v3_max_iterations=50,
     )
     monkeypatch.setattr(agent_factory, "get_settings", lambda: settings)

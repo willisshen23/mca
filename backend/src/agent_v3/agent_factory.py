@@ -30,6 +30,7 @@ def build_v3_model_configs(settings) -> tuple[ModelClientConfig, ModelRequestCon
         api_key=settings.agent_v2_main_llm_api_key or settings.llm_api_key,
         api_base=settings.agent_v2_main_llm_base_url or settings.llm_base_url,
         timeout=120,
+        verify_ssl=settings.llm_verify_ssl,
     )
     request_cfg = ModelRequestConfig(
         model=settings.agent_v2_main_llm_model or settings.llm_model,

@@ -184,6 +184,19 @@ async def stream_v3_events(
                 accumulated.append(_llm_content(chunk.payload))
             elif chunk.type == "answer":
                 payload = chunk.payload if isinstance(chunk.payload, dict) else {}
+                # 框架 stream_process 吞掉 invoke 异常后以 answer 帧下发
+                # {"output": str(e), "result_type": "error"}。若当正常 answer
+                # 发 done，turn 会被记成 success：用户看到假回复，且本轮 context
+                # 从未落库（checkpoint 只剩空 context），之后每轮都被模型当成
+                # 第一个问题。必须抛出，走 runtime 失败路径（记 failed + error 帧）。
+                if str(payload.get("result_type") or "") == "error":
+                    error_text = str(payload.get("output") or "agent 执行失败")
+                    logger.error(
+                        "agent_v3 框架吞掉的执行异常（answer result_type=error）: "
+                        "thread=%s request=%s error=%s",
+                        thread_id, request_id, error_text,
+                    )
+                    raise RuntimeError(error_text)
                 answer_output = str(payload.get("output") or "")
             elif chunk.type == "__interaction__":
                 saw_interrupt = True

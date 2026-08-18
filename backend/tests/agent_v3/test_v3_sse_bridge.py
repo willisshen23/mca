@@ -55,6 +55,18 @@ def setup_function():
     v3_sessions.reset_sessions()
 
 
+async def test_error_answer_raises_instead_of_silent_success():
+    """框架 stream_process 吞异常后以 answer 帧下发 {"output": str(e), "result_type": "error"}。
+    bridge 必须抛出（走 runtime 失败路径：turn 记 failed + 前端 error 帧），
+    绝不能当正常 answer 发 done——否则用户看到"成功"的空/错误回复，
+    且本轮 context 未落库，后续每轮都被当成第一个问题（2026-08-18 联调实测）。"""
+    with pytest.raises(RuntimeError, match="LLM client 创建失败"):
+        await _collect([
+            _out("answer", {"output": "LLM client 创建失败: verify_ssl",
+                            "result_type": "error"}),
+        ])
+
+
 async def test_llm_output_and_answer_to_done():
     frames = await _collect([
         _out("llm_output", {"content": "你", "result_type": "stream"}),

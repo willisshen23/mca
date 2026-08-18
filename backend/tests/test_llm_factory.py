@@ -10,6 +10,7 @@ def _fake_settings(monkeypatch):
         llm_api_key="k", llm_base_url="http://x", llm_model="m",
         llm_max_tokens=1000, llm_output_token_reserve=100,
         llm_timeout_seconds=600,
+        llm_verify_ssl=False,
         report_generation_llm_api_key="", report_generation_llm_base_url="",
         report_generation_llm_model="", report_generation_llm_max_tokens=0,
     )

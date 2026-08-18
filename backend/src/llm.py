@@ -90,7 +90,7 @@ def serialize_messages(messages: Any) -> str:
     return _serialize_message(messages)
 
 
-class LoggingModel(Model):
+class LoggingModel:
     """openjiuwen Model 的日志包装：每次 invoke/stream 前把输入打印到日志。
 
     用于 agent_v3 ReActAgent 主对话链路（框架内部持有多轮消息，无法在调用点
@@ -99,6 +99,12 @@ class LoggingModel(Model):
     与框架自身一致采用懒初始化：构造时不构建底层 client（避免在仅有配置、
     尚未真正调用大模型时触发 ssl/密钥校验），首次 invoke/stream 才按配置
     创建真实 Model。
+
+    注意：刻意不继承 openjiuwen Model。框架 react_agent 在调用前会无条件
+    探测 supports_kv_cache_release / build_kv_cache_invoke_kwargs 等能力
+    方法，若继承 Model 而不调 super().__init__()，这些继承方法访问
+    self._client 会抛 AttributeError；框架对能力方法均有 getattr 守卫，
+    纯鸭子类型包装（只暴露 invoke/stream）即可安全接入。
     """
 
     def __init__(self, model_client_config, model_config, *, label: str) -> None:
@@ -227,6 +233,7 @@ def get_model(role: str = "report_generation", temperature: float = 0.1,
         client_provider="OpenAI", api_key=api_key, api_base=base_url,
         # 仅首次建连生效（共享客户端缓存键不含 timeout）；逐请求超时走 invoke(timeout=...)
         timeout=settings.llm_timeout_seconds,
+        verify_ssl=settings.llm_verify_ssl,
     )
     request_cfg = ModelRequestConfig(model_name=model, temperature=temperature)
     guarded = GuardedModel(

@@ -87,7 +87,12 @@ def _resolve_key(args: argparse.Namespace, attr: str = "key") -> bytes | None:
         if getattr(args, f"{attr}_file", None):
             path = Path(getattr(args, f"{attr}_file"))
             if not path.is_file():
-                raise SystemExit(f"密钥文件不存在: {path}")
+                raise SystemExit(
+                    f"密钥文件不存在: {path}\n"
+                    f"（解析为绝对路径: {path.resolve()}）\n"
+                    "提示: --key-file 是相对当前目录的路径；在 backend 目录下运行可"
+                    "省略 --key-file，默认使用项目根下的 data/secrets/master.key。"
+                )
             return normalize_master_key(path.read_text(encoding="utf-8"))
         return normalize_master_key(raw)
     return load_master_key(default_key_file=DEFAULT_KEY_FILE)
@@ -95,7 +100,12 @@ def _resolve_key(args: argparse.Namespace, attr: str = "key") -> bytes | None:
 
 def _read_env_lines(path: Path) -> list[str]:
     if not path.is_file():
-        raise SystemExit(f".env 文件不存在: {path}")
+        raise SystemExit(
+            f".env 文件不存在: {path}\n"
+            f"（解析为绝对路径: {path.resolve()}）\n"
+            "提示: --env 是相对当前目录的路径；在 backend 目录下运行可省略 --env，"
+            "默认使用项目根下的 .env（首次使用请先 cp .env.example .env）。"
+        )
     return path.read_text(encoding="utf-8").splitlines(keepends=True)
 
 

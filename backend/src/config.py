@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # LLM 单次请求超时（秒），作用于所有 Agent 的 LLM 客户端。
     # 需小于 nginx proxy_read_timeout（600s），否则网关会先断连。
     llm_timeout_seconds: float = Field(default=600, alias="LLM_TIMEOUT_SECONDS")
+    # 是否校验大模型端点 SSL 证书。openjiuwen develop 版要求 verify_ssl=True 时
+    # 必须提供 ssl_cert 文件路径，否则建 client 直接报错；内网/自签端点默认关闭。
+    llm_verify_ssl: bool = Field(default=False, alias="LLM_VERIFY_SSL")
 
     data_analysis_llm_api_key: str = _agent_field("data_analysis", "api_key")
     data_analysis_llm_base_url: str = _agent_field("data_analysis", "base_url")
