@@ -151,3 +151,30 @@ async def test_progress_rail_invalid_json_tool_args_falls_back_to_empty():
     await rail.before_tool_call(_tool_ctx("search_activities", session,
                                           tool_args="{not json"))
     assert session.custom_frames[0]["args_summary"] == {}
+
+
+async def test_progress_rail_does_not_reemit_stale_guard_result():
+    """上一轮 generate/modify 留下的 report_html_guard_result 不应在无关工具
+    （如 get_report_content）之后再次透传：sse_bridge 会把 state_update 里的
+    该字段当成本轮“报告已更新”信号，done 帧带上旧 html_report，
+    前端在修改审批轮就把旧版报告卡片重复输出。"""
+    session = _FakeSession({"report_html_guard_result": {"valid": True},
+                            "report_context": {"report_id": "r1"}})
+    rail = ToolProgressRail()
+    await rail.after_tool_call(_tool_ctx("get_report_content", session,
+                                         tool_result='{"status":"ok"}'))
+    state_frames = [f for f in session.custom_frames if f.get("njbank") == "state_update"]
+    for frame in state_frames:
+        assert "report_html_guard_result" not in frame["data"]
+
+
+async def test_progress_rail_emits_guard_result_after_report_tools():
+    """report_html_guard_result 在产生它的工具（modify_report）之后仍须透传，
+    否则 sse_bridge 无法把本轮标记为 report_updated。"""
+    session = _FakeSession({"report_html_guard_result": {"valid": True}})
+    rail = ToolProgressRail()
+    await rail.after_tool_call(_tool_ctx("modify_report", session,
+                                         tool_result='{"status":"ok"}'))
+    state_frames = [f for f in session.custom_frames if f.get("njbank") == "state_update"]
+    assert state_frames
+    assert state_frames[0]["data"]["report_html_guard_result"] == {"valid": True}

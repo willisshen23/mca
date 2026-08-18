@@ -153,6 +153,15 @@ class ToolProgressRail(AgentRail):
     agent-core 流式无工具开始/结束帧（react_agent 源码确认），进度帧只能由 Rail 自发。
     """
 
+    # 某些 state 键只由特定工具产生，且会被下游当作“本轮发生了变化”的信号：
+    # report_html_guard_result 在 sse_bridge 里会置 report_updated=True。若在
+    # 无关工具调用后原样透传 state 中残留的旧值（如修改审批轮的
+    # get_report_content），done 帧会带上旧 html_report，前端把旧版报告卡片
+    # 重复输出。因此这些键只在产生它的工具调用后才透传。
+    _STATE_KEY_PRODUCERS = {
+        "report_html_guard_result": frozenset({"generate_report", "modify_report"}),
+    }
+
     def __init__(self,
                  suppressed_tools=frozenset({"generate_report"}),
                  safe_state_keys=("analysis_queue", "activity_list", "report_context",
@@ -182,6 +191,9 @@ class ToolProgressRail(AgentRail):
             })
         data = {}
         for key in self._safe_state_keys:
+            producers = self._STATE_KEY_PRODUCERS.get(key)
+            if producers is not None and ctx.inputs.tool_name not in producers:
+                continue
             value = ctx.session.get_state(key)
             if value:
                 data[key] = value
