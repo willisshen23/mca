@@ -1,0 +1,32 @@
+- id: process-alive
+  title: 主应用进程存活
+  collector: process
+  judge: process_alive
+- id: health-timeout
+  title: 健康检查响应
+  collector: process
+  judge: health_latency
+  params: {warn_ms: 2000, red_ms: 10000}
+- id: log-error-spike
+  title: 错误日志突增
+  collector: logs
+  judge: log_error_spike
+  params: {warn_min: 5, red_min: 20}
+- id: disk-usage
+  title: 磁盘水位
+  collector: system
+  judge: disk_usage
+  params: {warn_pct: 85, red_pct: 95}
+- id: mysql-unreachable
+  title: 数据库可达性
+  collector: database
+  judge: mysql_reachable
+- id: llm-latency
+  title: LLM 网关延迟
+  collector: llm_gateway
+  judge: llm_latency
+  params: {warn_s: 10, red_s: 30}
+- id: bank-api
+  title: 银行营销接口
+  collector: bank_api
+  judge: bank_api

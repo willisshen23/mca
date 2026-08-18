@@ -1,0 +1,21 @@
+.git
+.idea
+.vscode
+.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/node_modules
+mock/tests
+frontend/dist
+backend/.env
+backend/data
+# LLM 主密钥文件：严禁进入构建上下文（Docker daemon 可见）
+backend/data/secrets
+deploy/docker/secrets
+backend/src/infrastructure/static
+deploy/docker/.env
+deploy/docker/runtime-data
+offline-bundle
+*.tar.gz
+*.log

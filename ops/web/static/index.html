@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ops-assistant 运维助手</title>
+<style>
+  :root { --green:#16a34a; --yellow:#d97706; --red:#dc2626; --gray:#9ca3af; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         margin: 0; background: #f3f4f6; color: #111827; }
+  header { background: #1f2937; color: #fff; padding: 12px 20px;
+           display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  header input { padding: 6px 8px; border-radius: 6px; border: none; width: 200px; }
+  button { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer;
+           background: #2563eb; color: #fff; }
+  button.ghost { background: #e5e7eb; color: #111827; }
+  main { max-width: 1080px; margin: 20px auto; padding: 0 16px; }
+  section { background: #fff; border-radius: 10px; padding: 16px 20px;
+            margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .card { border-radius: 8px; padding: 12px; color: #fff; }
+  .card.green { background: var(--green); } .card.yellow { background: var(--yellow); }
+  .card.red { background: var(--red); } .card.gray { background: var(--gray); }
+  .card .t { font-weight: 600; } .card .m { font-size: 13px; margin-top: 6px; opacity: .95; }
+  .card button { margin-top: 8px; background: rgba(255,255,255,.25); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 12px; }
+  pre { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+        padding: 10px; white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+  textarea { width: 100%; min-height: 120px; font-family: inherit; padding: 8px; }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+  .cause { border-left: 3px solid var(--yellow); padding: 6px 10px; margin: 8px 0; background: #fffbeb; }
+  .sugg { border-left: 3px solid var(--green); padding: 6px 10px; margin: 8px 0; background: #f0fdf4; }
+  .muted { color: #6b7280; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ops-assistant 运维助手</h1>
+  <input id="token" type="password" placeholder="访问令牌（如已配置）">
+  <button class="ghost" onclick="saveToken()">保存令牌</button>
+  <button onclick="runNow()">立即巡检</button>
+</header>
+<main>
+  <section>
+    <h2>状态总览 <span id="snapshot-time" class="muted"></span></h2>
+    <div id="cards" class="cards"></div>
+  </section>
+  <section id="diag-panel" style="display:none">
+    <h2>诊断结果</h2>
+    <div id="diag-body"></div>
+    <div class="row">
+      <input id="followup-q" placeholder="追问，例如：我该怎么确认是网关负载问题？">
+      <button onclick="askFollowup()">追问</button>
+      <button class="ghost" onclick="saveAsRunbook()">存入知识库</button>
+    </div>
+    <div id="followup-log"></div>
+  </section>
+  <section>
+    <h2>巡检历史</h2>
+    <table><thead><tr><th>时间(UTC)</th><th>总体状态</th><th>摘要</th></tr></thead>
+    <tbody id="history"></tbody></table>
+  </section>
+  <section>
+    <h2>知识库（运维手册）</h2>
+    <table><thead><tr><th>slug</th><th>标题</th><th>分类</th><th></th></tr></thead>
+    <tbody id="runbooks"></tbody></table>
+    <div id="rb-editor" style="display:none">
+      <h2 id="rb-title"></h2>
+      <textarea id="rb-body"></textarea>
+      <div class="row"><button onclick="saveRunbook()">保存</button></div>
+    </div>
+  </section>
+</main>
+<script>
+let currentDiagId = null;
+let currentSlug = null;
+const $ = id => document.getElementById(id);
+
+function token() { return localStorage.getItem("ops_token") || ""; }
+function saveToken() { localStorage.setItem("ops_token", $("token").value); refresh(); }
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({"X-Ops-Token": token(), "Content-Type": "application/json"}, opts.headers || {});
+  const resp = await fetch(path, opts);
+  if (resp.status === 401) { alert("访问令牌无效，请在右上角输入"); throw new Error("401"); }
+  if (!resp.ok) { alert("请求失败：" + resp.status); throw new Error(String(resp.status)); }
+  return resp.json();
+}
+const LEVEL_LABEL = {green: "正常", yellow: "注意", red: "异常", gray: "未知"};
+
+async function refresh() {
+  const latest = await api("/api/inspections/latest");
+  $("snapshot-time").textContent = latest.created_at ? "快照时间 " + latest.created_at : (latest.message || "");
+  const cards = $("cards");
+  cards.innerHTML = "";
+  (latest.payload?.checks || latest.checks || []).forEach(c => {
+    const div = document.createElement("div");
+    div.className = "card " + c.level;
+    div.innerHTML = `<div class="t">${c.title}</div><div class="m">${c.message}</div>`;
+    if (c.level === "red" || c.level === "yellow") {
+      const btn = document.createElement("button");
+      btn.textContent = "诊断";
+      btn.onclick = () => diagnose(c.id);
+      div.appendChild(btn);
+    }
+    cards.appendChild(div);
+  });
+  const history = await api("/api/inspections/history?limit=20");
+  $("history").innerHTML = history.map(s =>
+    `<tr><td>${s.created_at}</td><td><span class="badge" style="background:var(--${s.overall})">${LEVEL_LABEL[s.overall] || s.overall}</span></td>` +
+    `<td>${(s.payload.checks || []).filter(c => c.level !== "green").map(c => c.title).join("、") || "全部正常"}</td></tr>`
+  ).join("");
+  const rbs = await api("/api/runbooks");
+  $("runbooks").innerHTML = rbs.map(r =>
+    `<tr><td>${r.slug}</td><td>${r.title}</td><td>${r.category}</td>` +
+    `<td><button class="ghost" onclick="editRunbook('${r.slug}')">编辑</button></td></tr>`
+  ).join("");
+}
+
+async function runNow() { await api("/api/inspections/run", {method: "POST"}); await refresh(); }
+
+async function diagnose(checkId) {
+  $("diag-panel").style.display = "block";
+  $("diag-body").innerHTML = "<p class='muted'>诊断中…</p>";
+  $("followup-log").innerHTML = "";
+  const result = await api("/api/diagnoses", {method: "POST", body: JSON.stringify({check_id: checkId})});
+  currentDiagId = result.id;
+  if (result.degraded) {
+    $("diag-body").innerHTML =
+      `<p><b>LLM 暂不可用</b>（${result.error}），以下为规则判定与运维手册：</p>` +
+      `<pre>${result.rule_message}</pre><pre>${result.runbook || "（无匹配运维手册）"}</pre>`;
+    return;
+  }
+  const c = result.conclusion;
+  let html = "";
+  (c.causes || []).forEach(x =>
+    html += `<div class="cause"><b>[${x.confidence}]</b> ${x.cause}<br><span class="muted">依据：${x.basis}</span></div>`);
+  (c.suggestions || []).forEach((x, i) =>
+    html += `<div class="sugg"><b>建议 ${i + 1}：</b>${x.step}<br><span class="muted">${x.detail}</span></div>`);
+  if (c.raw) html += `<pre>${c.raw}</pre>`;
+  $("diag-body").innerHTML = html || "<p class='muted'>无结论</p>";
+}
+
+async function askFollowup() {
+  const q = $("followup-q").value.trim();
+  if (!q || !currentDiagId) return;
+  const result = await api(`/api/diagnoses/${currentDiagId}/followup`, {method: "POST", body: JSON.stringify({question: q})});
+  $("followup-log").innerHTML += `<p><b>问：</b>${q}</p><pre>${result.answer}</pre>`;
+  $("followup-q").value = "";
+}
+
+async function saveAsRunbook() {
+  const slug = prompt("runbook slug（英文短横线命名，如 llm-timeout）：");
+  if (!slug) return;
+  const title = prompt("标题：", slug) || slug;
+  const body = $("diag-body").innerText;
+  await api("/api/runbooks", {method: "POST",
+    body: JSON.stringify({slug, title, category: slug, body: "# " + title + "\n\n" + body})});
+  await refresh();
+}
+
+async function editRunbook(slug) {
+  const rb = await api("/api/runbooks/" + slug);
+  currentSlug = slug;
+  $("rb-editor").style.display = "block";
+  $("rb-title").textContent = "编辑：" + rb.title;
+  $("rb-body").value = rb.body;
+}
+
+async function saveRunbook() {
+  const rb = await api("/api/runbooks/" + currentSlug);
+  await api("/api/runbooks/" + currentSlug, {method: "PUT", body: JSON.stringify({
+    title: rb.title, category: rb.category, body: $("rb-body").value})});
+  alert("已保存");
+  await refresh();
+}
+
+$("token").value = token();
+refresh();
+</script>
+</body>
+</html>

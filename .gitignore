@@ -1,0 +1,161 @@
+backend/data/checkpoints.db
+backend/data/skills.db
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+*.dylib
+.python-version
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# 离线部署包产物 (体积大, 不入库)
+offline-bundle/python/*.tar.gz
+offline-bundle/wheels/*.whl
+njbank-agent-offline-*.tar.gz
+
+# Environment files
+.env
+# .env.*
+!.env.example
+
+# LLM 主密钥文件（AES-GCM 静态加密解密用；必须与密文 .env 物理分离）
+backend/data/secrets/
+ops/data/secrets/
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# ---- Node.js ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# ---- IDE & Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# ---- OS ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ---- Misc ----
+*.log
+*.tmp
+*.bak
+.turbo/
+*.pdf
+
+backend/data/checkpoints.db-shm
+backend/data/checkpoints.db-wal
+.playwright-mcp/page-2026-07-03T03-39-46-775Z.yml
+backend/data/
+backend/src/static/
+.playwright-mcp/
+*.png
+!frontend/public/analysis-complete-icon.png
+backend/src/infrastructure/static/
+营销活动报告自定义方案.md
+findings.md
+PRD-产品需求说明书.md
+progress.md
+task_plan.md
+*.html
+tests/
+!backend/tests/
+!mock/tests/
+!ops/tests/
+!ops/web/static/index.html
+outputs/
+*.tar.gz
+# 自然语言活动分析助手实施方案 V2
+docs/智能体架构分析与灵活性改造方案.md
+docs/superpowers/plans/2026-07-17-agent-v2-m2-implementation-plan.md
+docs/superpowers/plans/2026-07-17-agent-v2-m3-implementation-plan.md
+docs/superpowers/specs/2026-07-15-agent-orchestration-redesign-design.md
+docs/superpowers/specs/agent-v2-progress.md
+# 自然语言活动分析助手实施方案 V2
+backend/tests/agent_v2/test_generate_report_pipeline.py
+docs/superpowers/specs/2026-07-16-agent-v2-implementation-plan.md
+docs/superpowers/specs/agent-v2-progress.md
+# 自然语言活动分析助手实施方案 V2
+docs/superpowers/plans/2026-07-20-discard-v1-keep-v2-implementation-plan.md
+docs/superpowers/specs/2026-07-16-agent-v2-implementation-plan.md
+docs/superpowers/specs/2026-07-20-discard-v1-keep-v2-design.md
+docs/superpowers/specs/agent-v2-progress.md
+自然语言活动分析助手实施方案V2.md
+.claude/settings.json
+.claude/worktrees/autonomous-planning-agent
+backend/tests/test_report_html_guard.py
+backend/tests/test_v1_cleanup_migration.py
+backend/tests/agent_v2/test_common.py
+backend/tests/agent_v2/test_hitl_edit_resume.py
+backend/tests/agent_v2/test_state_concurrent_writes.py
+backend/tests/agent_v2/test_tools_data_parse.py
+backend/tests/agent_v2/test_tools_report_export.py
+backend/tests/agent_v2/test_tools_report_modify.py
+backend/tests/agent_v2/test_tools_skill.py
+docs/需求说明书.md
+docs/project-architecture.md
+docs/architecture-images/01-system-overview.mmd
+docs/architecture-images/02-backend-depth.mmd
+docs/architecture-images/03-agent-v2-seams.mmd
+docs/architecture-images/04-report-generation-flow.mmd
+docs/architecture-images/05-frontend-modules.mmd
+
+# 功能说明书截图例外
+!docs/功能说明书/images/*.png
+scripts/draw_application_architecture.py
+scripts/draw_business_architecture.py
+scripts/draw_data_flow_architecture.py
+scripts/draw_technical_architecture.py
+offline-bundle/
+backend/tests/test_report_placements.py
+backend/tests/agent_v2/test_system_prompt.py
+docs/方案介绍.md
+docs/功能说明书/功能说明书.docx
+deploy.zip
+ops/data/
+java-backend/target/
+
+# P4 离线包（大文件不入库）
+offline-v3/wheels/*.whl
+offline-v3/dist/

@@ -1,0 +1,9 @@
+# ops-assistant 依赖均由主应用 backend venv 提供（离线 wheel 已含），此文件仅作说明。
+# cryptography：LLM API Key 密文解密（src/secrets.py，AES-256-GCM）
+cryptography
+fastapi
+uvicorn
+httpx
+pyyaml
+pymysql
+python-dotenv

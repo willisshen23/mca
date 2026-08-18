@@ -1,0 +1,603 @@
+		{
+            "plateFormCd": "业务价值指标分析",--模块内部编号（北极星指标模块有两个子模块，主要用来区分北极星两个子模块的）
+            "plateName": "北极星指标分析：最新日累计值",--模块名称
+            "plateNo": "N00101",--模块编号
+            "plateSeqNo": 0,--模块顺序
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,--指标自然顺序（从0开始，用于指标明确个数）
+					"indSeqNo" : 1,--指标顺序（自定义排序）
+                    "indexName": "前端运算指标",--指标名称
+                    "indexNo": "前端运算指标",--指标编号
+                    "indexShowName": "测试12312",--指标展示名称
+                    "isForeEndCalc": "1",--是否前端运算指标
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgContent": "$I200170$+$I200209"--前端运算指标计算公式
+                        }
+                    ],
+                    "showFlag": "1"--指标是否展示
+                },
+                {
+                    "indSortNo": 3,
+					"indSeqNo" : 2,
+                    "indexName": "理财余额",
+                    "indexNo": "I200170",
+                    "indexShowName": "上月理财余额",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [{"I200170" : 0}]--指标结果
+                },
+                {
+                    "indSortNo": 6,
+					"indSeqNo" : 3,
+                    "indexName": "上月末AUM时点值",
+                    "indexNo": "I200209",
+                    "indexShowName": "上月末AUM时点值",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [{"I200209" : 0}]
+                }
+            ],
+            "plateTypeCd": "1",--模块类型（区分北极星还是多活动对比还是多维分析）
+            "projNo": "XMDHD202605191506594339"--项目编号
+        },
+        {
+            "plateFormCd": "营销活动指标",
+            "plateName": "北极星指标分析：最新日累计值",
+            "plateNo": "N00102",
+            "plateSeqNo": 0,
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,
+					"indSeqNo" : 1,
+                    "indexName": "客户编号(标签)",
+                    "indexNo": "I200001",
+                    "indexShowName": "客户编号（标签）1",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [{"I200001" : 100}]
+                },
+                {
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+                    "indexName": "目标达标标志",
+                    "indexNo": "I200295",
+                    "indexShowName": "当前达标人数",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [{"I200295" : 100}]
+                }
+            ],
+            "plateTypeCd": "1",
+            "projNo": "XMDHD202605191506594339"
+        },
+        {
+            "plateName": "活动前后对比分析",--模块名称
+            "plateNo": "MD202511060933490310",--模块编号
+            "plateSeqNo": 2,--模块顺序
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,--指标自然顺序（从0开始，用于指标明确个数）
+                    "indexName": "客户等级代码",--指标名称
+                    "indexNo": "I200040",--指标编号
+                    "resData": [
+						{
+							"I200040": 1228,--指标结果
+							"new_lvl": "私人银行客户",--旧分段（分段自己定义）
+							"old_lvl": "私人银行客户"--新分段（分段自己定义）
+						},
+						{
+							"I200040": 516,
+							"new_lvl": "白金卡客户",
+							"old_lvl": "白金卡客户"
+						},
+						{
+							"I200040": 1023,
+							"new_lvl": "银卡N2客户",
+							"old_lvl": "银卡N2客户"
+						},
+						{
+							"I200040": 13,
+							"new_lvl": "银卡N1客户",
+							"old_lvl": "银卡N1客户"
+						},
+						{
+							"I200040": 179,
+							"new_lvl": "银卡N0客户",
+							"old_lvl": "银卡N0客户"
+						}
+					]
+                }
+            ],
+            "plateTypeCd": "2",--模块类型（区分北极星还是多活动对比还是多维分析）
+            "projNo": "XMDHD202605191506594339"--项目编号
+        },
+        {
+            "plateName": "周期性对比",--模块名称
+            "plateNo": "MD202511051604180292",--模块编号
+            "plateSeqNo": 4,--模块顺序
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,--指标自然顺序（从0开始，用于指标明确个数）
+					"indSeqNo" : 1,--指标顺序（自定义排序）
+					"cfgContent": "2026-06-01,2026-06-15",--指标周期开始\结束时间
+                    "indexName": "AUM时点值",--指标名称
+                    "indexNo": "I100003",--指标编号
+                    "indexShowName": "AUM时点值求和",--指标展示名称
+                    "isForeEndCalc": "0",--是否前端运算指标
+                    "showFlag": "1",--指标是否展示
+                    "resData": [
+						{
+							"I100003": 19546.65
+						}]--指标结果
+                },
+                {
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+					"cfgContent": "2026-06-01,2026-06-15",
+                    "indexName": "前端运算指标",
+                    "indexNo": "前端运算指标",
+                    "indexShowName": "AUM时点值求和(万)",
+                    "isForeEndCalc": "1",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgContent": "$I1000031$/10000",--前端运算指标计算公式
+                            "indSeqNo": "3",--指标顺序（自定义排序）
+                            "indexNo": "前端运算指标"--指标编号
+                        }
+                    ],
+                    "showFlag": "1"--指标是否展示
+                },
+				{
+                    "indSortNo": 0,
+					"indSeqNo" : 1,
+					"cfgContent": "2026-06-16,2026-06-30",
+                    "indexName": "AUM时点值",
+                    "indexNo": "I100003",
+                    "indexShowName": "AUM时点值求和",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [
+						{
+							"I100003": 26784.78
+						}]
+                },
+                {
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+					"cfgContent": "2026-06-01,2026-06-15",
+                    "indexName": "前端运算指标",
+                    "indexNo": "前端运算指标",
+                    "indexShowName": "AUM时点值求和(万)",
+                    "isForeEndCalc": "1",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgContent": "$I1000031$/10000",
+                            "indSeqNo": "3",
+                            "indexNo": "前端运算指标"
+                        }
+                    ],
+                    "showFlag": "1"
+                }
+            ],
+            "plateTypeCd": "3",--模块类型（区分北极星还是多活动对比还是多维分析）
+            "projNo": "XMDHD202605191506594339"--项目编号
+        },
+        {
+            "plateName": "多活动对比分析：活动维度转化情况",--模块名称
+            "plateNo": "MD202511041516560271",-模块编号
+            "plateSeqNo": 6,--模块顺序
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,--指标自然顺序（从0开始，用于指标明确个数）
+					"indSeqNo" : 1,--指标顺序（自定义排序）
+                    "indexName": "前端运算指标",--指标名称
+                    "indexNo": "前端运算指标",--指标编号
+                    "indexShowName": "AUM均值",--指标展示名称
+                    "isForeEndCalc": "1",--是否前端运算指标
+                    "plateRuleCfgInfList": [
+                        {
+						    "cfgContent": "$I1000030$/$I2000011"--前端运算指标计算公式
+						}
+                    ],
+                    "showFlag": "1",--指标是否展示
+                    "resData": [
+						{
+							"act_no":"PV10175522026060222378","actName":"演示银行App6月促活营销"
+						}]--活动编号\活动名称
+                },
+                {
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+                    "indexName": "客户编号",
+                    "indexNo": "I200001",
+                    "indexShowName": "源名单客户数",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [
+						{
+							"act_no":"PV10175522026060222378","actName":"演示银行App6月促活营销","I200001":545213.58
+						}]--活动编号\活动名称\指标值
+                },
+				{
+                    "indSortNo": 0,
+					"indSeqNo" : 1,
+                    "indexName": "前端运算指标",
+                    "indexNo": "前端运算指标",
+                    "indexShowName": "AUM均值",
+                    "isForeEndCalc": "1",
+                    "plateRuleCfgInfList": [
+                        {
+						    "cfgContent": "$I1000030$/$I2000011"
+						}
+                    ],
+                    "showFlag": "1",
+                    "resData": [
+						{
+							"act_no":"PV10175522026042922263","actName":"五一节前理财营销"
+						}]
+                },
+                {
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+                    "indexName": "客户编号",
+                    "indexNo": "I200001",
+                    "indexShowName": "源名单客户数",
+                    "isForeEndCalc": "0",
+                    "showFlag": "1",
+                    "resData": [
+						{
+							"act_no":"PV10175522026042922263","actName":"五一节前理财营销","I200001":64563.58
+						}]
+                }
+            ],
+            "plateTypeCd": "4",--模块类型（区分北极星还是多活动对比还是多维分析）
+            "projNo": "XMDHD202605191506594339"--项目编号
+        },
+        {
+            "plateName": "多维分析",--模块名称
+            "plateNo": "MD202511052114490307",--模块编号
+            "plateSeqNo": 10,--模块顺序
+            "plateShowIndCfgInfDtoList": [
+                {
+                    "indSortNo": 0,--指标自然顺序（从0开始，用于指标明确个数）
+					"indSeqNo" : 1,--指标顺序（自定义排序）
+                    "indexName": "AUM时点值",--指标名称
+                    "indexNo": "I200013",--指标编号
+                    "indexShowName": "AUM时点值1",--指标展示名称
+                    "isForeEndCalc": "0",--是否前端运算指标
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgTypeCd": "2",--指标用途：指标（1是维度，2是指标，3是条件）
+							"cfgTypeName": "AUM时点值",--指标名称
+                            "srcTableName": "COAP_DATA.COAP_CUST_BIZ_VAL_ANALY"
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",指标用途：维度（1是维度，2是指标，3是条件）
+                            "especChartIndRuleCfgInfs": [
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "200",--分段上限
+                                    "segName": "南京分行",--分段名称
+                                    "segSort": 1,--分段排序
+                                    "segStart": "200"--分段下限
+                                },
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "206",
+                                    "segName": "上海分行",
+                                    "segSort": 2,
+                                    "segStart": "206"
+                                },
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "215",
+                                    "segName": "北京分行",
+                                    "segSort": 3,
+                                    "segStart": "215"
+                                }
+                            ],
+                            "orderNum": "1"--顺序
+                        },
+                        {
+                            "indexName": "性别代码",
+                            "indexNo": "I200176",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {
+                                    "indexNo": "I200176",
+                                    "segEnd": "02",
+                                    "segName": "男",
+                                    "segSort": 1,
+                                    "segStart": "02"
+                                },
+                                {
+                                    "indexNo": "I200176",
+                                    "segEnd": "03",
+                                    "segName": "女",
+                                    "segSort": 2,
+                                    "segStart": "03"
+                                }
+                            ],
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",--模块类型（区分北极星还是多活动对比还是多维分析）
+                    "projNo": "XMDHD202605191506594339",--项目编号
+					"showFlag": "1",--指标是否展示
+                    "resData": [
+						{
+							"I200174": "南京分行",
+							"I200176": "男",
+							"totalCount": 1140--指标结果
+						},
+						{
+							"I200174": "上海分行",
+							"I200176": "男",
+							"totalCount": 24
+						},
+						{
+							"I200174": "北京分行",
+							"I200176": "女",
+							"totalCount": 36
+						}
+					]
+                },
+				{
+                    "indSortNo": 1,
+					"indSeqNo" : 2,
+                    "indexName": "前端运算指标",
+                    "indexNo": "前端运算指标",
+                    "indexShowName": "前端运算指标",
+                    "isForeEndCalc": "1",--是否前端运算指标
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgContent": "$I1000030$/$I2000011",--前端运算指标计算公式
+							"cfgTypeCd": "2",--指标用途：指标（1是维度，2是指标，3是条件）
+							"cfgTypeName": "前端运算指标",--指标名称
+                            "srcTableName": null
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "200",
+                                    "segName": "南京分行",
+                                    "segSort": 1,
+                                    "segStart": "200"
+                                },
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "206",
+                                    "segName": "上海分行",
+                                    "segSort": 2,
+                                    "segStart": "206"
+                                },
+                                {
+                                    "indexNo": "I200174",
+                                    "segEnd": "215",
+                                    "segName": "北京分行",
+                                    "segSort": 3,
+                                    "segStart": "215"
+                                }
+                            ],
+                            "orderNum": "1"
+                        },
+                        {
+                            "indexName": "性别代码",
+                            "indexNo": "I200176",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {
+                                    "indexNo": "I200176",
+                                    "segEnd": "02",
+                                    "segName": "男",
+                                    "segSort": 1,
+                                    "segStart": "02"
+                                },
+                                {
+                                    "indexNo": "I200176",
+                                    "segEnd": "03",
+                                    "segName": "女",
+                                    "segSort": 2,
+                                    "segStart": "03"
+                                }
+                            ],
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",
+                    "projNo": "XMDHD202605191506594339",
+					"showFlag": "1",
+                    "resData": [
+						{
+							"I200174": "南京分行",
+							"I200176": "男",
+							"totalCount": 1140250.5
+						},
+						{
+							"I200174": "上海分行",
+							"I200176": "男",
+							"totalCount": 24005.25
+						},
+						{
+							"I200174": "北京分行",
+							"I200176": "女",
+							"totalCount": 36007.88
+						}
+					]
+                },
+				{
+                    "indSortNo": 2,
+					"indSeqNo" : 3,
+                    "indexName": "参与活动人数",
+                    "indexNo": "I200300",
+                    "indexShowName": "参与活动人数",
+                    "isForeEndCalc": "0",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgTypeCd": "2",
+							"cfgTypeName": "参与活动人数",
+                            "srcTableName": "COAP_DATA.COAP_CUST_BIZ_VAL_ANALY"
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {"indexNo": "I200174", "segEnd": "200", "segName": "南京分行", "segSort": 1, "segStart": "200"},
+                                {"indexNo": "I200174", "segEnd": "206", "segName": "上海分行", "segSort": 2, "segStart": "206"},
+                                {"indexNo": "I200174", "segEnd": "215", "segName": "北京分行", "segSort": 3, "segStart": "215"}
+                            ],
+                            "orderNum": "1"
+                        },
+                        {
+                            "indexName": "性别代码",
+                            "indexNo": "I200176",
+							"cfgTypeCd": "1",
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",
+                    "projNo": "XMDHD202605191506594339",
+					"showFlag": "1",
+                    "resData": [
+						{"I200174": "南京分行", "I200176": "男", "totalCount": 1140},
+						{"I200174": "上海分行", "I200176": "男", "totalCount": 24},
+						{"I200174": "北京分行", "I200176": "女", "totalCount": 36}
+					]
+                },
+				{
+                    "indSortNo": 10,
+					"indSeqNo" : 10,
+                    "indexName": "参与活动人数",
+                    "indexNo": "I200300",
+                    "indexShowName": "参与活动人数（支行）",
+                    "isForeEndCalc": "0",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgTypeCd": "2",
+							"cfgTypeName": "参与活动人数",
+                            "srcTableName": "COAP_DATA.COAP_CUST_BIZ_VAL_ANALY"
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",
+                            "orderNum": "1"
+                        },
+                        {
+                            "indexName": "所属支行名称",
+                            "indexNo": "I200175",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {"indexNo": "I200175", "segEnd": "20001", "segName": "南京城北支行", "segSort": 1, "segStart": "20001"},
+                                {"indexNo": "I200175", "segEnd": "20002", "segName": "南京城南支行", "segSort": 2, "segStart": "20002"},
+                                {"indexNo": "I200175", "segEnd": "20601", "segName": "上海浦东支行", "segSort": 3, "segStart": "20601"},
+                                {"indexNo": "I200175", "segEnd": "21501", "segName": "北京中关村支行", "segSort": 4, "segStart": "21501"}
+                            ],
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",
+                    "projNo": "XMDHD202605191506594339",
+					"showFlag": "1",
+                    "resData": [
+						{"I200174": "南京分行", "I200175": "南京城北支行", "totalCount": 590},
+						{"I200174": "南京分行", "I200175": "南京城南支行", "totalCount": 550},
+						{"I200174": "上海分行", "I200175": "上海浦东支行", "totalCount": 24},
+						{"I200174": "北京分行", "I200175": "北京中关村支行", "totalCount": 36}
+					]
+                },
+				{
+                    "indSortNo": 11,
+					"indSeqNo" : 11,
+                    "indexName": "AUM时点值",
+                    "indexNo": "I200013",
+                    "indexShowName": "AUM时点值（支行）",
+                    "isForeEndCalc": "0",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgTypeCd": "2",
+							"cfgTypeName": "AUM时点值",
+                            "srcTableName": "COAP_DATA.COAP_CUST_BIZ_VAL_ANALY"
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",
+                            "orderNum": "1"
+                        },
+                        {
+                            "indexName": "所属支行名称",
+                            "indexNo": "I200175",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {"indexNo": "I200175", "segEnd": "20001", "segName": "南京城北支行", "segSort": 1, "segStart": "20001"},
+                                {"indexNo": "I200175", "segEnd": "20002", "segName": "南京城南支行", "segSort": 2, "segStart": "20002"},
+                                {"indexNo": "I200175", "segEnd": "20601", "segName": "上海浦东支行", "segSort": 3, "segStart": "20601"},
+                                {"indexNo": "I200175", "segEnd": "21501", "segName": "北京中关村支行", "segSort": 4, "segStart": "21501"}
+                            ],
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",
+                    "projNo": "XMDHD202605191506594339",
+					"showFlag": "1",
+                    "resData": [
+						{"I200174": "南京分行", "I200175": "南京城北支行", "totalCount": 590},
+						{"I200174": "南京分行", "I200175": "南京城南支行", "totalCount": 550},
+						{"I200174": "上海分行", "I200175": "上海浦东支行", "totalCount": 24},
+						{"I200174": "北京分行", "I200175": "北京中关村支行", "totalCount": 36}
+					]
+                },
+				{
+                    "indSortNo": 12,
+					"indSeqNo" : 12,
+                    "indexName": "前端运算指标",
+                    "indexNo": "前端运算指标",
+                    "indexShowName": "前端运算指标（支行）",
+                    "isForeEndCalc": "1",
+                    "plateRuleCfgInfList": [
+                        {
+                            "cfgContent": "$I1000030$/$I2000011",
+							"cfgTypeCd": "2",
+							"cfgTypeName": "前端运算指标",
+                            "srcTableName": null
+                        },
+                        {
+                            "indexName": "所属分行名称",
+                            "indexNo": "I200174",
+							"cfgTypeCd": "1",
+                            "orderNum": "1"
+                        },
+                        {
+                            "indexName": "所属支行名称",
+                            "indexNo": "I200175",
+							"cfgTypeCd": "1",
+                            "especChartIndRuleCfgInfs": [
+                                {"indexNo": "I200175", "segEnd": "20001", "segName": "南京城北支行", "segSort": 1, "segStart": "20001"},
+                                {"indexNo": "I200175", "segEnd": "20002", "segName": "南京城南支行", "segSort": 2, "segStart": "20002"},
+                                {"indexNo": "I200175", "segEnd": "20601", "segName": "上海浦东支行", "segSort": 3, "segStart": "20601"},
+                                {"indexNo": "I200175", "segEnd": "21501", "segName": "北京中关村支行", "segSort": 4, "segStart": "21501"}
+                            ],
+                            "orderNum": "2"
+                        }
+                    ],
+                    "plateTypeCd": "5",
+                    "projNo": "XMDHD202605191506594339",
+					"showFlag": "1",
+                    "resData": [
+						{"I200174": "南京分行", "I200175": "南京城北支行", "totalCount": 590147.5},
+						{"I200174": "南京分行", "I200175": "南京城南支行", "totalCount": 550137.5},
+						{"I200174": "上海分行", "I200175": "上海浦东支行", "totalCount": 24006.0},
+						{"I200174": "北京分行", "I200175": "北京中关村支行", "totalCount": 36009.0}
+					]
+                }
+        }

@@ -1,0 +1,16 @@
+{
+  "pageSize": 999,
+  "pageNum": 1,
+  "date": null,
+  "actStatusCd": "",
+  "sginAct": "",
+  "actSrcCd": "",
+  "actTypeCd": "",
+  "actNo": "个养",--关键词
+  "labelNoList": [],
+  "actName": "个养",
+  "actStartDt": "",
+  "actEndDt": "",
+  "showMallAct": 0,
+  "creatorNo": ""
+}
