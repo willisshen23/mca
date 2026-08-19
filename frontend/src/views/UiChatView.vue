@@ -7,13 +7,6 @@ import {
   renameConversationAPI,
   getUserId
 } from '@/api/conversations.js';
-import {
-  runAgentV2,
-  cancelAgentV2,
-  resumeAgentV2,
-  getAgentV2RunStatus,
-  attachAgentV2Run
-} from '@/api/agentRun.js';
 import { uploadFile } from '@/api/files.js';
 import { fetchQuickPrompts } from '@/api/quickPrompts.js';
 import { useChatUrlParams } from '@/composables/useChatUrlParams';
@@ -28,8 +21,7 @@ import {
 import { renderMarkdown } from '@/utils/markdown.js';
 import {
   visibleTraceSteps, traceProgressText, thinkingTitleText, shouldDisplayThinkingTrace,
-  stepKey, traceDisplayName, isTraceNode, isPendingStep,
-  upsertTraceStep, syncTracePlan, finishThinkingTrace,
+  stepKey, isTraceNode, isPendingStep,
   showTemplateMatchDetail, showTemplateListDetail, templateMatchResult,
   templateMatchCandidates, activityTemplateMatchResult, templateListNames,
   activityTraceLabel, activityRouteSummary
@@ -54,7 +46,6 @@ const uploadingFile = ref(false);
 const uploadError = ref('');
 const draggingFile = ref(false);
 const dragDepth = ref(0);
-let pageUnloading = false;
 let uninstallReportBridges = null;
 const downloadPngReportFromEvent = (message, event) => downloadPngReport(message, event?.currentTarget?.closest('.html-report-card')?.querySelector('.html-report-preview'));
 const sidebarCollapsed = ref(false);
@@ -99,17 +90,17 @@ const chat = useAgentChat({
   }
 });
 const {
-  addMessage, persistConversation, restoreConversationMessages, loadConversation,
-  addRuntimeTrace, finishRunningThinking, hasRunningThinking, pruneEmptyCompletedTraces,
-  addHtmlReport, isDownloadableExportMessage, downloadExportArtifact,
-  restoreConversationReports, toggleActivitySelection, setAllActivityRows,
-  attachActivitySelection, removeComposerSelectedRow, addApprovalRequest,
+  loadConversation,
+  hasRunningThinking,
+  isDownloadableExportMessage, downloadExportArtifact,
+  toggleActivitySelection, setAllActivityRows,
+  removeComposerSelectedRow,
   formatApprovalDescription, handleReportFeedback, submitDislikeFeedback,
-  canSubmitReportFeedback, composerSelectionMessage, composerSelectedRows,
-  hasPendingApproval, removeStaleTransportFallback, getRunSequence, setRunSequence,
-  // Task 5 流式函数迁入 composable 前，暂从 chat 取用这些共享助手
-  ensureThinkingTrace, resumePausedThinkingTrace,
-  SYSTEM_BUSY_MESSAGE, isTransportError, requestErrorMessage, storageKey
+  canSubmitReportFeedback, composerSelectedRows,
+  hasPendingApproval,
+  // 流式对话引擎（Task 5 迁入 composable）
+  sendMessage: chatSendMessage, cancelRun, resolveApproval,
+  recoverAgentRun, currentRunningTraceSnapshot
 } = chat;
 
 const createConversation = (init) => chat.createConversationState(init);
@@ -122,33 +113,6 @@ const canSend = computed(() =>
     || composerSelectedRows.value.length > 0
   )
 );
-
-// 当前运行中 thinking trace 的快照，用于底部浮动进度指示器
-const currentRunningTraceSnapshot = computed(() => {
-  const conversation = activeConversation.value;
-  if (!conversation?.typing) return null;
-  const trace = conversation.dynamicMessages?.find((message) => (
-    message.role === 'execution_trace' && message.status === 'running'
-  ));
-  if (!trace) return null;
-  const steps = visibleTraceSteps(trace);
-  const currentStep = steps.find((step) => step.status === 'running');
-  return {
-    title: thinkingTitleText(trace),
-    progressText: traceProgressText(trace),
-    currentStepName: currentStep?.displayName || currentStep?.node || '处理中',
-    currentStepMessage: currentStep?.message || '',
-    trace
-  };
-});
-
-function handlePageExit() {
-  pageUnloading = true;
-}
-
-function handlePageShow() {
-  pageUnloading = false;
-}
 
 function formatMeta(updatedAt) {
   if (!updatedAt) return '刚刚';
@@ -181,11 +145,7 @@ function calculateGroup(updatedAt) {
 }
 
 onMounted(async () => {
-  pageUnloading = false;
   getUserId();
-  window.addEventListener('beforeunload', handlePageExit);
-  window.addEventListener('pagehide', handlePageExit);
-  window.addEventListener('pageshow', handlePageShow);
   uninstallReportBridges = installHtmlReportBridges();
   try {
     const remotePrompts = await fetchQuickPrompts();
@@ -264,36 +224,6 @@ async function switchConversation(id) {
   }
   if (conv) await recoverAgentRun(conv);
   scrollBottom();
-}
-
-const recoveringRunThreads = new Set();
-
-async function recoverAgentRun(conversation) {
-  if (!conversation?.id || recoveringRunThreads.has(conversation.id)) return;
-  recoveringRunThreads.add(conversation.id);
-  try {
-    const after = getRunSequence(conversation.id);
-    const status = await getAgentV2RunStatus(conversation.id);
-    if (!status?.exists) {
-      if (hasRunningThinking(conversation)) {
-        finishRunningThinking(conversation, { message: '任务已中断' });
-        persistConversation(conversation);
-      }
-      return;
-    }
-    if (!status.active && Number(status.last_seq || 0) <= after) return;
-
-    removeStaleTransportFallback(conversation);
-    conversation.typing = true;
-    const response = await attachAgentV2Run(conversation.id, after);
-    if (!response.ok) throw new Error(`恢复任务失败：${response.status}`);
-    await consumeAgentStream(response, conversation, { recovery: true });
-  } catch (e) {
-    conversation.typing = false;
-    console.warn('恢复正在执行的任务失败', e);
-  } finally {
-    recoveringRunThreads.delete(conversation.id);
-  }
 }
 
 function startRename(conversation) {
@@ -436,61 +366,6 @@ function handleMarkdownActivityTableClick(event, message) {
   nextTick(() => inputTextareaRef.value?.focus());
 }
 
-async function resolveApproval(message, decision, editedArgs = null) {
-  if (message.resolved) return;
-  const conversation = activeConversation.value;
-  let finalEditedArgs = {};
-  if (decision === 'edit') {
-    try {
-      finalEditedArgs = editedArgs !== null ? editedArgs : JSON.parse(message.editedArgs || '{}');
-    } catch (e) {
-      message.editError = '参数 JSON 格式错误：' + e.message;
-      return;
-    }
-  }
-  message.resolved = true;
-  message.decision = decision;
-  message.expanded = false;
-  message.editError = '';
-  const resumedTrace = resumePausedThinkingTrace(conversation);
-  persistConversation();
-
-  conversation.typing = true;
-  setRunSequence(conversation.id, 0);
-  try {
-    const response = await resumeAgentV2({
-      threadId: conversation.id,
-      decision,
-      tool: message.tool,
-      editedArgs: finalEditedArgs,
-      message: '',
-      userId: urlUserId || getUserId(),
-      userName: urlUserName,
-      orgNo: urlOrgNo,
-      srcSysNo: urlSrcSysNo,
-      channel: urlChannel
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.detail || `请求失败：${response.status}`);
-    }
-
-    await consumeAgentStream(response, conversation, { isResume: true });
-  } catch (e) {
-    conversation.typing = false;
-    if (resumedTrace) {
-      resumedTrace.status = 'paused';
-      resumedTrace.expanded = true;
-    }
-    message.resolved = false;
-    message.decision = null;
-    message.expanded = true;
-    persistConversation();
-    addMessage('ai', requestErrorMessage(e, '审批恢复失败：'), conversation);
-  }
-}
-
 function triggerFileUpload() {
   if (activeConversation.value?.typing || uploadingFile.value) return;
   uploadError.value = '';
@@ -575,325 +450,17 @@ function removeUploadedFile() {
   uploadError.value = '';
 }
 
-async function reconnectAgentStream(conversation, options = {}) {
-  if (pageUnloading || (options.reconnectAttempts || 0) >= 2) return pageUnloading;
-  try {
-    const after = getRunSequence(conversation.id);
-    const status = await getAgentV2RunStatus(conversation.id);
-    if (!status?.exists || (!status.active && Number(status.last_seq || 0) <= after)) {
-      return false;
-    }
-    const response = await attachAgentV2Run(conversation.id, after);
-    if (!response.ok) return false;
-    await consumeAgentStream(response, conversation, {
-      ...options,
-      recovery: true,
-      reconnectAttempts: (options.reconnectAttempts || 0) + 1
-    });
-    return true;
-  } catch (e) {
-    console.warn('任务流自动续接失败', e);
-    return false;
-  }
-}
-
-async function consumeAgentStream(response, conversation, options = {}) {
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  const executionSteps = [];
-  let pendingHtmlReport = '';
-  let pendingReportPayload = {};
-  let reportGuardRejected = false;
-  let reportUpdatedThisTurn = false;
-  let pendingActivityList = [];
-  let pendingExportArtifact = null;
-  const thinkingStartedAt = Date.now();
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const chunks = buffer.split('\n\n');
-      buffer = chunks.pop() || '';
-
-      for (const chunk of chunks) {
-        const lines = chunk.split('\n');
-        const eventIdLine = lines.find((line) => line.startsWith('id:'));
-        const eventSequence = eventIdLine ? Number(eventIdLine.slice(3).trim()) : 0;
-        const dataLines = lines.filter((line) => line.startsWith('data:'));
-        if (dataLines.length === 0) continue;
-
-        const dataStr = dataLines.map((line) => line.slice(5).trim()).join('');
-        if (dataStr === '[DONE]') continue;
-
-        try {
-          const event = JSON.parse(dataStr);
-          if (eventSequence > 0) setRunSequence(conversation.id, eventSequence);
-          if (event.type === 'node_update') {
-            if (event.payload?.export_artifact) {
-              pendingExportArtifact = event.payload.export_artifact;
-            }
-            if (event.payload?.html_report) {
-              reportUpdatedThisTurn = true;
-            }
-            if (Array.isArray(event.payload?.activity_list) && event.payload.activity_list.length > 0) {
-              pendingActivityList = event.payload.activity_list;
-            }
-            if (!event.progress_message) continue;
-            const stepInfo = {
-              node: event.node,
-              displayName: traceDisplayName(event.node, event.node_display_name || event.node),
-              message: event.progress_message,
-              payload: event.payload || {},
-              timestamp: Date.now(),
-              fromPlan: false
-            };
-            executionSteps.push(stepInfo);
-            const trace = ensureThinkingTrace(conversation, thinkingStartedAt);
-            syncTracePlan(trace, event.payload?.plan, event.payload || {});
-            upsertTraceStep(trace, {
-              ...stepInfo,
-              status: event.payload?.tool_status === 'running'
-                ? 'running'
-                : (event.payload?.plan?.find((item) => item.step === event.node)?.status || 'done')
-            });
-            trace.durationMs = Date.now() - (trace.startedAt || thinkingStartedAt);
-
-            if (event.payload?.report_html_guard_result?.valid === false) {
-              reportGuardRejected = true;
-              pendingHtmlReport = '';
-              pendingReportPayload = {};
-            } else if (event.payload?.html_report) {
-              pendingHtmlReport = event.payload.html_report;
-              pendingReportPayload = event.payload || {};
-            }
-            persistConversation(conversation);
-            scrollBottom();
-          } else if (event.type === 'approval_required') {
-            conversation.typing = false;
-            finishRunningThinking(conversation, { awaiting_approval: true });
-            addApprovalRequest(event.payload, conversation);
-          } else if (event.type === 'done') {
-            const reply = event.payload?.final_response || '分析完成。';
-            conversation.typing = false;
-            if (event.payload?.report_html_guard_result?.valid === false) {
-              reportGuardRejected = true;
-              pendingHtmlReport = '';
-              pendingReportPayload = {};
-            }
-            const reportUpdated = Boolean(event.payload?.report_updated || reportUpdatedThisTurn);
-            const htmlReport = reportUpdated
-              ? (event.payload?.html_report || (reportGuardRejected ? '' : pendingHtmlReport))
-              : '';
-            const reportPayload = reportUpdated && event.payload?.html_report
-              ? (event.payload || {})
-              : pendingReportPayload;
-            const runningTrace = conversation.dynamicMessages.find((message) => (
-              message.role === 'execution_trace' && message.status === 'running'
-            ));
-
-            if (executionSteps.length > 0) {
-              if (runningTrace) {
-                syncTracePlan(runningTrace, event.payload?.plan, event.payload || {});
-                finishThinkingTrace(runningTrace, event.payload || {});
-              } else {
-                const traceSteps = [];
-                const finalTrace = { steps: traceSteps };
-                syncTracePlan(finalTrace, event.payload?.plan, event.payload || {});
-                executionSteps.forEach((step) => upsertTraceStep(finalTrace, step));
-                conversation.dynamicMessages.push({
-                  role: 'execution_trace',
-                  steps: traceSteps.length ? traceSteps : executionSteps,
-                  payload: event.payload || {},
-                  expanded: false,
-                  status: 'done',
-                  startedAt: thinkingStartedAt,
-                  durationMs: Date.now() - thinkingStartedAt
-                });
-              }
-            }
-            pruneEmptyCompletedTraces(conversation);
-
-            const replyAlreadyRestored = options.recovery && conversation.dynamicMessages.some(
-              (message) => message.role === 'ai' && message.text === reply
-            );
-            const replyMessage = !event.payload?.awaiting_approval && !replyAlreadyRestored
-              ? addMessage('ai', reply, conversation, {
-                ...(event.payload?.export_artifact || pendingExportArtifact
-                  ? { exportArtifact: event.payload?.export_artifact || pendingExportArtifact }
-                  : {})
-              })
-              : null;
-            const selectableActivities = event.payload?.activity_list || pendingActivityList;
-            if (replyMessage && !reportUpdated && Array.isArray(selectableActivities) && selectableActivities.length > 0) {
-              attachActivitySelection(replyMessage, selectableActivities, conversation);
-            }
-            if (htmlReport) {
-              addHtmlReport(htmlReport, conversation, reportPayload);
-            }
-            return;
-          } else if (event.type === 'error') {
-            conversation.typing = false;
-            finishRunningThinking(conversation, event.payload || {});
-            addMessage(
-              'ai',
-              requestErrorMessage(event.payload?.message || '未知错误', '出错了：'),
-              conversation
-            );
-            return;
-          } else if (event.type === 'cancelled') {
-            conversation.typing = false;
-            finishRunningThinking(conversation);
-            addMessage('ai', '任务已取消。', conversation);
-            return;
-          }
-        } catch (e) {
-          // 忽略解析失败的行
-        }
-      }
-    }
-
-    // 未收到 done 就断流时，先尝试从服务端游标续接；刷新离开页面时不写错误消息。
-    if (pageUnloading) return;
-    if (await reconnectAgentStream(conversation, options)) return;
-    conversation.typing = false;
-    const fallbackRunningTrace = conversation.dynamicMessages.find((message) => (
-      message.role === 'execution_trace' && message.status === 'running'
-    ));
-    if (fallbackRunningTrace) {
-      finishRunningThinking(conversation);
-    }
-    addMessage('ai', SYSTEM_BUSY_MESSAGE, conversation, { transportFallback: true });
-  } catch (e) {
-    if (pageUnloading) return;
-    if (isTransportError(e) && await reconnectAgentStream(conversation, options)) return;
-    conversation.typing = false;
-    finishRunningThinking(conversation);
-    const errorMessage = requestErrorMessage(e);
-    addMessage('ai', errorMessage, conversation, {
-      transportFallback: errorMessage === SYSTEM_BUSY_MESSAGE
-    });
-  }
-}
-
+// 薄包装：清理本地输入状态后委托给 composable 的 sendMessage（Task 8 前过渡）
 async function sendMsg() {
   const text = inputText.value.trim();
   const currentUploadedFile = uploadedFile.value;
   const selectedRows = [...composerSelectedRows.value];
   if (!text && !currentUploadedFile?.file_path && selectedRows.length === 0) return;
-  const selectionText = selectedRows.length
-    ? `已选择第 ${selectedRows.join('、')} 行`
-    : '';
-  const personalRequestText = text || (
-    currentUploadedFile?.file_name
-      ? `请基于上传的活动数据文件「${currentUploadedFile.file_name}」生成分析报告`
-      : ''
-  );
-  const requestText = [selectionText, personalRequestText].filter(Boolean).join('\n');
-
-  const conversation = activeConversation.value;
-
-  // 历史遗留的本地 conv-* 会话（如旧版删除全部会话后的替补会话）未在服务端
-  // 注册，直接发送会导致刷新后会话丢失。发送前先注册到服务端并迁移 id；
-  // 后端图上下文从本条消息重新开始（UI 消息记录保留）。
-  if (conversation.id?.startsWith('conv-')) {
-    try {
-      const data = await createConversationAPI(conversation.title || '新建分析对话');
-      const oldId = conversation.id;
-      conversation.id = data.id;
-      if (activeConversationId.value === oldId) {
-        activeConversationId.value = data.id;
-      }
-      const cached = localStorage.getItem(storageKey(oldId));
-      if (cached) {
-        localStorage.setItem(storageKey(data.id), cached);
-        localStorage.removeItem(storageKey(oldId));
-      }
-    } catch (e) {
-      console.warn('本地会话注册到服务端失败，继续使用本地会话', e);
-    }
-  }
-
-  if (conversation.typing) return;
+  if (activeConversation.value?.typing) return;
   inputText.value = '';
   uploadedFile.value = null;
   uploadError.value = '';
-
-  // 本地添加用户消息（addMessage 会自动生成标题）
-  const displayText = currentUploadedFile?.file_name
-    ? `${personalRequestText}\n\n附件：${currentUploadedFile.file_name}`
-    : personalRequestText;
-  addMessage('user', displayText, conversation, { selectedRows });
-  if (composerSelectionMessage.value) {
-    composerSelectionMessage.value.selectedIds = [];
-    persistConversation(conversation);
-  }
-
-  // 如果是第一条用户消息，同步标题到后端
-  const isFirstUserMessage = conversation.dynamicMessages.filter((m) => m.role === 'user').length === 1;
-  if (isFirstUserMessage && conversation.title) {
-    try {
-      await renameConversationAPI(conversation.id, conversation.title);
-    } catch (e) {
-      console.error('同步标题失败', e);
-    }
-  }
-
-  // 调用后端 SSE /api/v2/agent/run
-  conversation.typing = true;
-  setRunSequence(conversation.id, 0);
-  scrollBottom();
-
-  // 新请求开始时，若存在前一次异常中断残留的 running trace，先将其关闭
-  const staleRunningTrace = conversation.dynamicMessages.find((message) => (
-    message.role === 'execution_trace' && message.status === 'running'
-  ));
-  if (staleRunningTrace) {
-    finishThinkingTrace(staleRunningTrace, { message: '前一次任务已中断' });
-  }
-
-  try {
-    const userId = getUserId();
-    const response = await runAgentV2({
-      threadId: conversation.id,
-      message: requestText,
-      // originalUserText 是“本轮”用户消息的展示文本（刷新后按它重建气泡），
-      // 必须随轮次变化；曾误用 originalUserQuestion（恒为会话第一个问题），
-      // 导致刷新后每轮用户气泡都显示成第一个问题。
-      originalUserText: displayText || requestText,
-      filePath: currentUploadedFile?.file_path || '',
-      userId: urlUserId || getUserId(),
-      userName: urlUserName,
-      orgNo: urlOrgNo,
-      srcSysNo: urlSrcSysNo,
-      channel: urlChannel
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.detail || `请求失败：${response.status}`);
-    }
-
-    await consumeAgentStream(response, conversation);
-  } catch (e) {
-    conversation.typing = false;
-    finishRunningThinking(conversation);
-    addMessage('ai', requestErrorMessage(e), conversation);
-  }
-}
-
-async function cancelRun() {
-  const conversation = activeConversation.value;
-  if (!conversation || !conversation.typing) return;
-
-  try {
-    await cancelAgentV2(conversation.id);
-  } catch (e) {
-    console.error('取消请求失败', e);
-  }
+  await chatSendMessage({ text, uploadedFile: currentUploadedFile, selectedRows });
 }
 
 function handleKey(event) {
@@ -940,11 +507,7 @@ function startInputResize(event) {
 }
 
 onBeforeUnmount(() => {
-  pageUnloading = true;
   stopInputResize();
-  window.removeEventListener('beforeunload', handlePageExit);
-  window.removeEventListener('pagehide', handlePageExit);
-  window.removeEventListener('pageshow', handlePageShow);
   uninstallReportBridges?.();
   cancelPendingPngExports();
 });
@@ -1577,7 +1140,7 @@ onBeforeUnmount(() => {
                   class="send-btn-circle stop-btn-circle"
                   type="button"
                   aria-label="停止"
-                  @click="cancelRun"
+                  @click="cancelRun()"
                 >
                   <i class="ti ti-square" aria-hidden="true"></i>
                 </button>
