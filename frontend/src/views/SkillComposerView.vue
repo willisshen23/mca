@@ -45,6 +45,11 @@ async function applyTemplate(tpl) {
   }
 }
 
+function goReport() {
+  store.resetReportSession();
+  router.push({ name: 'report' });
+}
+
 onMounted(loadTemplates);
 </script>
 
@@ -114,7 +119,7 @@ onMounted(loadTemplates);
       <button class="btn" type="button" @click="router.push({ name: 'source', params: { type: store.state.currentType } })">
         <i class="ti ti-arrow-left"></i> 上一步
       </button>
-      <button class="btn pri" type="button" @click="router.push({ name: 'report' })">
+      <button class="btn pri" type="button" @click="goReport">
         生成分析报告 <i class="ti ti-report"></i>
       </button>
     </div>

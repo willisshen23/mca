@@ -1,10 +1,12 @@
 import { computed, reactive } from 'vue';
 import { skillData } from '../data/mockData';
 
+export const REPORT_SESSION_KEY = 'report_page_session';
+
 const state = reactive({
   currentType: 'online',
   selectedActivityNames: new Set(),
-  uploadDone: false,
+  offlineFile: null,
   offlineStart: '',
   offlineEnd: '',
   canvasComps: skillData.slice(0, 5).map((item) => ({ ...item })),
@@ -29,13 +31,13 @@ export function useAnalysisStore() {
     if (state.currentType === 'online') {
       return state.selectedActivityNames.size > 0;
     }
-    return Boolean(state.uploadDone && state.offlineStart && state.offlineEnd && state.offlineStart <= state.offlineEnd);
+    return Boolean(state.offlineFile?.file_path && state.offlineStart && state.offlineEnd && state.offlineStart <= state.offlineEnd);
   });
   const lockSummary = computed(() => ({
     typeName: state.currentType === 'online' ? '线上活动' : '线下活动',
     source: state.currentType === 'online'
       ? `${state.selectedActivityNames.size || 3}项线上活动`
-      : '2024线下活动数据.xlsx',
+      : state.offlineFile?.file_name || '线下活动数据',
     period: state.currentType === 'online' ? '2024-01-01 至 2024-03-31' : `${state.offlineStart || '2024-01-01'} 至 ${state.offlineEnd || '2024-03-31'}`
   }));
   const reportTitle = computed(() => (
@@ -48,7 +50,7 @@ export function useAnalysisStore() {
     state.currentType = type === 'offline' ? 'offline' : 'online';
     if (shouldReset) {
       state.selectedActivityNames.clear();
-      state.uploadDone = false;
+      state.offlineFile = null;
       state.offlineStart = '';
       state.offlineEnd = '';
     }
@@ -74,8 +76,24 @@ export function useAnalysisStore() {
     state.offlineEnd = end;
   }
 
-  function toggleUpload() {
-    state.uploadDone = !state.uploadDone;
+  function setOfflineFile(fileInfo) {
+    state.offlineFile = fileInfo ? {
+      file_name: fileInfo.file_name || '',
+      file_path: fileInfo.file_path || '',
+      size: fileInfo.size || 0
+    } : null;
+  }
+
+  function clearOfflineFile() {
+    state.offlineFile = null;
+  }
+
+  function resetReportSession() {
+    try {
+      localStorage.removeItem(REPORT_SESSION_KEY);
+    } catch (e) {
+      console.warn('清除报告会话失败', e);
+    }
   }
 
   function addCanvasSkill(skill) {
@@ -142,7 +160,9 @@ export function useAnalysisStore() {
     toggleActivity,
     setAllActivities,
     setOfflineDates,
-    toggleUpload,
+    setOfflineFile,
+    clearOfflineFile,
+    resetReportSession,
     addCanvasSkill,
     removeCanvasSkill,
     moveCanvasSkill,
