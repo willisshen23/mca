@@ -16,7 +16,7 @@ function makeStep(node, status, extra = {}) {
 describe('agentTrace', () => {
   it('traceDisplayName 使用中文显示名', () => {
     expect(traceDisplayName('intent_recognition')).toBe('意图识别');
-    expect(traceDisplayName('unknown_node', '', '兜底')).toBe('兜底');
+    expect(traceDisplayName('unknown_node', '兜底')).toBe('兜底');
   });
 
   it('stepStatusText 覆盖各状态', () => {

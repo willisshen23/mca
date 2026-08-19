@@ -28,9 +28,9 @@ export const TRACE_STEP_DISPLAY_NAMES = {
   uploaded_data_processing_merged: '数据处理与分析'
 };
 
-export function traceDisplayName(stepOrKey, fallback = '', defaultText = '') {
+export function traceDisplayName(stepOrKey, fallback = '') {
   const key = typeof stepOrKey === 'string' ? stepOrKey : stepKey(stepOrKey);
-  return TRACE_STEP_DISPLAY_NAMES[key] || fallback || defaultText || key || '处理中';
+  return TRACE_STEP_DISPLAY_NAMES[key] || fallback || key || '处理中';
 }
 
 export const TRACE_STEP_ORDER = [
