@@ -13,7 +13,8 @@ import LogsView from '../views/LogsView.vue';
 
 const routes = [
   { path: '/', redirect: '/chat-ui' },
-  { path: '/management', name: 'management', component: HomeView },
+  { path: '/main', name: 'main', component: HomeView },
+  { path: '/management', redirect: '/main' },
   { path: '/analysis/:type(online|offline)/source', name: 'source', component: SourceConfigView },
   { path: '/analysis/compose', name: 'compose', component: SkillComposerView },
   { path: '/analysis/report', name: 'report', component: ReportView },

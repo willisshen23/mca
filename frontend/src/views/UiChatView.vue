@@ -23,6 +23,7 @@ import { useChatUrlParams } from '@/composables/useChatUrlParams';
 import { activityStatusTone, displayActivityStatus, displayActivityType, replaceActivityStatusCodes } from '@/utils/activityDictionaries.js';
 import { renderMarkdown } from '@/utils/markdown.js';
 import ThinkingStatusIcon from '@/components/common/ThinkingStatusIcon.vue';
+import TraceTemplateMatch from '@/components/chat/TraceTemplateMatch.vue';
 
 const SYSTEM_BUSY_MESSAGE = '系统繁忙，请稍后再试';
 const TRANSPORT_ERROR_MARKERS = [
@@ -421,12 +422,23 @@ function compactTemplate(template = {}) {
     template_name: template.template_name || template.name || '',
     similarity_score: template.similarity_score,
     similarity_rank: template.similarity_rank,
+    ...(template.reasoning ? { reasoning: template.reasoning } : {}),
+    ...(template.match_strategy ? { match_strategy: template.match_strategy } : {}),
+    ...(template.top_n ? { top_n: template.top_n } : {}),
     skill_sequence: Array.isArray(template.skill_sequence) ? template.skill_sequence : [],
     dependent_components: Array.isArray(template.dependent_components)
       ? template.dependent_components.map((item) => ({
+          position: item.position,
           component_id: item.component_id || item.id || '',
           name: item.display_name || item.name || item.skill_name || '',
-          skill_name: item.skill_name || item.name || ''
+          skill_name: item.skill_name || item.name || '',
+          ...(item.skill_description ? { skill_description: item.skill_description } : {}),
+          ...(item.skill_category ? { skill_category: item.skill_category } : {}),
+          // 展示模板预览可能较长，持久化时截断，避免 localStorage 超限
+          ...(item.skill_template_preview
+            ? { skill_template_preview: String(item.skill_template_preview).slice(0, 2000) }
+            : {}),
+          ...(Array.isArray(item.metrics) && item.metrics.length ? { metrics: item.metrics } : {})
         }))
       : []
   };
@@ -444,6 +456,10 @@ function compactTracePayload(payload = {}) {
     ...(payload.template_match_result ? { template_match_result: compactTemplate(payload.template_match_result) } : {}),
     ...(Array.isArray(payload.matched_data_templates) ? { matched_data_templates: payload.matched_data_templates.map(compactTemplate) } : {}),
     ...(payload.activity_template_match_result ? { activity_template_match_result: compactTemplate(payload.activity_template_match_result) } : {}),
+    // 分析能力清单只保留名称，足够思维面板展示，避免持久化体积膨胀
+    ...(Array.isArray(payload.template_list)
+      ? { template_list: payload.template_list.map((item) => ({ template_name: item?.template_name || item?.name || '' })) }
+      : {}),
     ...(payload.component_value_cleanup_result ? { component_value_cleanup_result: payload.component_value_cleanup_result } : {})
   };
 }
@@ -1575,32 +1591,45 @@ function activityRouteSummary(step) {
   return '';
 }
 
-function matchedDataTemplateItems(step) {
+// 数据模板匹配结果：优先 template_match_result（含 matched_data_templates），
+// 否则取 matched_data_templates 首位作为主匹配。
+function templateMatchResult(step) {
+  if (isPendingStep(step)) return null;
+  const payload = step?.payload || {};
+  if (payload.template_match_result) return payload.template_match_result;
+  const list = payload.matched_data_templates;
+  return Array.isArray(list) && list.length > 0 ? list[0] : null;
+}
+
+function templateMatchCandidates(step) {
   if (isPendingStep(step)) return [];
-  const templates = step?.payload?.matched_data_templates || step?.payload?.template_match_result?.matched_data_templates || [];
-  const primary = Array.isArray(templates) && templates.length > 0
-    ? templates[0]
-    : step?.payload?.template_match_result || null;
-  const dimensions = analysisDimensionNames(primary);
-  return dimensions.map((name) => ({ name }));
+  const payload = step?.payload || {};
+  const list = payload.matched_data_templates || payload.template_match_result?.matched_data_templates || [];
+  return Array.isArray(list) ? list : [];
 }
 
-// 从匹配结果中提取分析维度/组件名称（skill_sequence 优先，其次 dependent_components），
-// 用于向用户呈现“实时匹配的分析组件”，不暴露数据模板与评分。
-function analysisDimensionNames(source) {
-  if (!source) return [];
-  const sequence = Array.isArray(source.skill_sequence) ? source.skill_sequence : [];
-  const fromSequence = sequence.map((item) => (typeof item === 'string' ? item : item?.name || item?.skill_name)).filter(Boolean);
-  if (fromSequence.length > 0) return fromSequence;
-  const components = Array.isArray(source.dependent_components) ? source.dependent_components : [];
-  return components.map((item) => item?.display_name || item?.name || item?.skill_name).filter(Boolean);
+function activityTemplateMatchResult(step) {
+  if (isPendingStep(step)) return null;
+  return step?.payload?.activity_template_match_result || null;
 }
 
-// 报告分析框架：展示有序的分析组件（skill_sequence），不暴露活动报告模板名称。
-function activityFrameworkSummary(step) {
-  const result = step?.payload?.activity_template_match_result;
-  const dimensions = analysisDimensionNames(result);
-  return dimensions.join(' · ');
+function templateListNames(step) {
+  const list = step?.payload?.template_list;
+  if (!Array.isArray(list)) return [];
+  return list.map((item) => item?.template_name || item?.name || '').filter(Boolean);
+}
+
+// 展示条件：非等待态直接看 payload（template_list_fetch/template_matching 会被合并进
+// data_pipeline_merged 步骤，payload 随之合并，按节点名判断会漏掉合并步骤）；
+// 等待态只在原子步骤上显示“等待执行”，避免合并步骤出现占位详情框。
+function showTemplateMatchDetail(step) {
+  if (isPendingStep(step)) return stepKey(step) === 'template_matching';
+  return Boolean(templateMatchResult(step) || (step?.payload && step.payload.template_match_result));
+}
+
+function showTemplateListDetail(step) {
+  if (isPendingStep(step)) return stepKey(step) === 'template_list_fetch';
+  return Array.isArray(step?.payload?.template_list);
 }
 
 function activityName(activity) {
@@ -3298,27 +3327,39 @@ onBeforeUnmount(() => {
                         <div class="detail-label">意图识别</div>
                         <div class="detail-value">{{ step.payload.marketing_intent.intent_type }} — {{ step.payload.marketing_intent.scene }}</div>
                       </div>
-                      <div v-if="isTraceNode(step, 'template_matching') && (isPendingStep(step) || (step.payload && step.payload.template_match_result))" class="trace-step-detail">
-                        <div class="detail-label">已匹配分析组件</div>
+                      <div v-if="showTemplateListDetail(step)" class="trace-step-detail">
+                        <div class="detail-label">分析能力</div>
                         <div v-if="isPendingStep(step)" class="detail-value">等待执行</div>
-                        <ol v-else-if="matchedDataTemplateItems(step).length" class="matched-template-list">
-                          <li v-for="(template, templateIndex) in matchedDataTemplateItems(step)" :key="`${template.name}-${templateIndex}`">
-                            <span class="matched-template-name">{{ template.name }}</span>
-                          </li>
-                        </ol>
-                        <div v-else class="detail-value">已根据活动数据完成分析组件匹配</div>
+                        <details v-else-if="templateListNames(step).length" class="capability-list">
+                          <summary>
+                            <i class="ti ti-chevron-right capability-list-chevron" aria-hidden="true"></i>
+                            已加载 {{ templateListNames(step).length }} 项分析能力
+                          </summary>
+                          <div class="capability-list-body">
+                            <span v-for="name in templateListNames(step)" :key="name" class="capability-chip">{{ name }}</span>
+                          </div>
+                        </details>
+                        <div v-else class="detail-value">已加载 {{ step.payload.template_list.length }} 项分析能力</div>
                       </div>
-                      <div v-if="isTraceNode(step, 'activity_template_matching') && (isPendingStep(step) || (step.payload && step.payload.activity_template_match_result))" class="trace-step-detail">
-                        <div class="detail-label">报告分析框架</div>
-                        <div class="detail-value">{{ isPendingStep(step) ? '等待执行' : (activityFrameworkSummary(step) || '已完成报告分析框架编排') }}</div>
-                      </div>
+                      <TraceTemplateMatch
+                        v-if="showTemplateMatchDetail(step)"
+                        label="分析模板匹配"
+                        :pending="isPendingStep(step)"
+                        :result="templateMatchResult(step)"
+                        :candidates="templateMatchCandidates(step)"
+                        empty-text="已根据活动数据完成分析模板匹配"
+                      />
+                      <TraceTemplateMatch
+                        v-if="isTraceNode(step, 'activity_template_matching') && (isPendingStep(step) || activityTemplateMatchResult(step))"
+                        label="报告分析框架"
+                        :pending="isPendingStep(step)"
+                        :result="activityTemplateMatchResult(step)"
+                        :candidates="activityTemplateMatchResult(step) ? [activityTemplateMatchResult(step)] : []"
+                        empty-text="已完成报告分析框架编排"
+                      />
                       <div v-if="isTraceNode(step, 'outbound_activity_data_fetch')" class="trace-step-detail">
                         <div class="detail-label">外呼活动业务数据</div>
                         <div class="detail-value">{{ isPendingStep(step) ? '等待执行' : (step.payload.outbound_activity_data_found ? '已查询到匹配外呼活动数据，后续编排报告分析框架并生成HTML报告' : '未查询到匹配外呼活动数据') }}</div>
-                      </div>
-                      <div v-if="isTraceNode(step, 'template_list_fetch') && (isPendingStep(step) || (step.payload && step.payload.template_list))" class="trace-step-detail">
-                        <div class="detail-label">分析能力</div>
-                        <div class="detail-value">{{ isPendingStep(step) ? '等待执行' : `已加载 ${step.payload.template_list.length} 项分析能力` }}</div>
                       </div>
                       <div v-if="isTraceNode(step, 'selected_activity_router') && activityRouteSummary(step)" class="trace-step-detail">
                         <div class="detail-label">判断结果</div>
@@ -3785,9 +3826,14 @@ button.selected-row-circle:hover { background: #d8e7ff; transform: translateY(-1
 .trace-step-detail { display: flex; flex-direction: column; margin-top: 6px; padding: 6px 10px; background: #fff; border-radius: 6px; border: .5px solid var(--BD); }
 .detail-label { order: 1; font-size: 10px; color: var(--T3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
 .detail-value { order: 2; font-size: 12px; color: var(--T1); font-weight: 500; }
-.matched-template-list { order: 2; margin: 0; padding-left: 18px; color: var(--T1); font-size: 12px; font-weight: 500; }
-.matched-template-list li + li { margin-top: 4px; }
-.matched-template-score { color: var(--T2); font-weight: 500; }
+.capability-list { order: 2; }
+.capability-list summary { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--T1); cursor: pointer; list-style: none; user-select: none; }
+.capability-list summary::-webkit-details-marker { display: none; }
+.capability-list summary:hover { color: var(--P); }
+.capability-list-chevron { font-size: 12px; color: var(--T3); transition: transform .15s ease; }
+.capability-list[open] > summary .capability-list-chevron { transform: rotate(90deg); }
+.capability-list-body { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.capability-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--BG); border: .5px solid var(--BD); color: var(--T2); font-size: 11px; font-weight: 500; line-height: 1; white-space: nowrap; }
 .activity-list-preview { order: 3; display: grid; gap: 8px; margin: 8px 0 0; }
 .activity-preview-item { padding: 8px 10px; border: .5px solid var(--BD); border-radius: 8px; background: var(--BG); }
 .activity-preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; min-width: 0; }

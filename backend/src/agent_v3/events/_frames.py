@@ -85,18 +85,22 @@ def tool_progress_frame(tool: str, status: str, summary: str = "", args_summary:
     return _frame(message)
 
 
-def pipeline_step_frame(step: str, status: str) -> str:
+def pipeline_step_frame(step: str, status: str, payload: dict | None = None) -> str:
     if status == "running":
         progress = PIPELINE_PROGRESS_MESSAGE.get(step, f"正在执行 {step}...")
     else:
         display = PIPELINE_STEP_DISPLAY_NAME.get(step, step)
         progress = f"{display}完成"
+    frame_payload: dict[str, Any] = {"tool_status": status}
+    # 步骤完成时携带业务数据（匹配模板/分析能力等），供前端思维面板渲染详情
+    if payload:
+        frame_payload.update(payload)
     message = {
         "type": "node_update",
         "node": step,
         "node_display_name": PIPELINE_STEP_DISPLAY_NAME.get(step, step),
         "progress_message": progress,
-        "payload": {"tool_status": status},
+        "payload": frame_payload,
     }
     return _frame(message)
 

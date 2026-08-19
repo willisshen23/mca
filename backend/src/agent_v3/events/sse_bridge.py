@@ -173,8 +173,10 @@ async def stream_v3_events(
                     if state_data:
                         yield _frame({"type": "node_update", "payload": state_data})
                 elif "step" in data:
+                    step_payload = data.get("payload")
                     yield pipeline_step_frame(str(data.get("step")),
-                                              str(data.get("status") or "running"))
+                                              str(data.get("status") or "running"),
+                                              payload=step_payload if isinstance(step_payload, dict) else None)
                 continue
 
             if not isinstance(chunk, OutputSchema):

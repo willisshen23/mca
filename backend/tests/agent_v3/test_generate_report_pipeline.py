@@ -72,6 +72,41 @@ def _patch_pipeline(monkeypatch, calls, *, outbound_mode="template_component_rep
     )
 
 
+def test_pipeline_step_done_events_carry_trace_payloads(monkeypatch):
+    """步骤 done 帧需携带业务数据（前端思维面板按 step payload 渲染，对齐 v2 契约）。"""
+    calls = []
+    _patch_pipeline(monkeypatch, calls)
+    monkeypatch.setattr(
+        rg,
+        "template_matching_node",
+        _make_node("template_matching", calls, {
+            "next_agent": "x",
+            "template_match_result": {"template_id": "DT-1", "template_name": "模板A"},
+            "matched_data_templates": [{"template_id": "DT-1"}],
+        }),
+    )
+    monkeypatch.setattr(
+        rg,
+        "activity_template_matching_node",
+        _make_node("activity_template_matching", calls, {
+            "next_agent": "x",
+            "activity_template_match_result": {"template_id": "AT-1"},
+        }),
+    )
+    monkeypatch.setattr(rg, "validate_report_html", lambda html: _guard_valid())
+    monkeypatch.setattr(rg, "save_report_file", lambda request_id, html: ("asset.html", 1))
+
+    events = []
+    asyncio.run(rg.run_report_pipeline({"request_id": "r-trace"}, writer=events.append))
+
+    done = {e["step"]: e for e in events if e["status"] == "done"}
+    assert done["template_matching"]["payload"]["template_match_result"]["template_id"] == "DT-1"
+    assert done["template_matching"]["payload"]["matched_data_templates"] == [{"template_id": "DT-1"}]
+    assert done["activity_template_matching"]["payload"]["activity_template_match_result"]["template_id"] == "AT-1"
+    # 未配置白名单的步骤不携带 payload，避免整包 state 推流
+    assert "payload" not in done["component_value_fetch"]
+
+
 def test_pipeline_call_order_multi_activity(monkeypatch):
     calls = []
     _patch_pipeline(monkeypatch, calls)

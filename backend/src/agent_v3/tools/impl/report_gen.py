@@ -386,6 +386,27 @@ def _preset_workflow_mode(
 
 # ── Step C：内部管线编排 ──
 
+# 步骤完成时透传给前端思维面板的业务数据白名单（对齐 v2 trace 面板的 step payload
+# 契约：前端按 step.node + payload 渲染匹配模板/分析能力等详情）。未列出的步骤
+# 不携带 payload，避免把整包 state 推流。
+_STEP_TRACE_PAYLOAD_KEYS = {
+    "selected_activity_router": ("activity_route_result", "workflow_mode", "activity_list"),
+    "outbound_activity_data_fetch": ("outbound_activity_data_found",),
+    "template_list_fetch": ("template_list",),
+    "template_matching": ("template_match_result", "matched_data_templates"),
+    "component_value_cleanup": ("component_value_cleanup_result",),
+    "activity_template_matching": ("activity_template_match_result",),
+}
+
+
+def _step_trace_payload(name: str, state: dict) -> dict:
+    keys = _STEP_TRACE_PAYLOAD_KEYS.get(name)
+    if not keys:
+        return {}
+    # False/0 是合法业务值（如 outbound_activity_data_found=False），只过滤空容器
+    return {key: state[key] for key in keys if state.get(key) not in (None, "", [], {})}
+
+
 async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:
     """按旧工作流顺序调用原节点函数（async）。失败约定转换为 PipelineAbort。"""
     s = dict(seed)
@@ -413,7 +434,11 @@ async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:
         # 旧节点失败约定：next_agent=finalize 且非末步
         if s.get("next_agent") == "finalize" and name != "marketing_report_synthesis":
             raise PipelineAbort(s.get("final_response") or f"{name} 执行失败")
-        writer({"step": name, "status": "done"})
+        done_event = {"step": name, "status": "done"}
+        trace_payload = _step_trace_payload(name, s)
+        if trace_payload:
+            done_event["payload"] = trace_payload
+        writer(done_event)
 
     preset_mode = s.get("workflow_mode") or ""
     await step("selected_activity_router", selected_activity_router_node)

@@ -12,6 +12,7 @@ from . import (
     env_config,
     files,
     logs,
+    online_activities,
     quick_prompts,
     reports,
     skills,
@@ -34,6 +35,7 @@ def create_api_router() -> APIRouter:
     router.include_router(conversation_logs.router)
     router.include_router(agent_run_history.router)
     router.include_router(logs.router)
+    router.include_router(online_activities.router)
     router.include_router(agent_v2.router)
     router.include_router(usage_dashboard.router)
     return router

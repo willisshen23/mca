@@ -618,3 +618,53 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 页面整体字体放大（仅 /main 首页看板） */
+.home-top-label { font-size: 14px; }
+
+.hero-eyebrow { font-size: 13px; }
+.usage-hero h2 { font-size: 28px; }
+.usage-hero p { font-size: 15px; }
+.hero-action { font-size: 14px; }
+
+.usage-toolbar h3, .card-heading h3, .section-heading h3 { font-size: 17px; }
+.usage-toolbar p, .card-heading p, .section-heading p { font-size: 13px; }
+.usage-export-button { font-size: 13px; }
+.period-tabs button { font-size: 13px; }
+.usage-error { font-size: 14px; }
+
+.metric-label { font-size: 13px; }
+.metric-value { font-size: 30px; }
+.metric-change { font-size: 12px; }
+
+.secondary-item span { font-size: 13px; }
+.secondary-item strong { font-size: 19px; }
+.secondary-item small { font-size: 11px; }
+
+.llm-usage-heading h3 { font-size: 17px; }
+.llm-usage-heading > span { font-size: 12px; }
+.llm-usage-eyebrow { font-size: 10px; }
+.llm-metric-copy span { font-size: 11px; }
+.llm-metric-copy strong { font-size: 20px; }
+.llm-metric-copy small { font-size: 10px; }
+
+.token-trend-heading h4 { font-size: 14px; }
+.token-trend-heading p { font-size: 11px; }
+.token-gridline span { font-size: 10px; }
+.token-date-label { font-size: 10px; }
+.token-trend-empty { font-size: 12px; }
+
+.trend-legend { font-size: 11px; }
+.chart-gridline span { font-size: 11px; }
+.date-label { font-size: 11px; }
+.empty-insight { font-size: 13px; }
+
+.organization-rank { font-size: 12px; }
+.organization-meta strong { font-size: 13px; }
+.organization-meta span { font-size: 11px; }
+.empty-organization { font-size: 13px; }
+
+.usage-home .hmc h4 { font-size: 15px; }
+.usage-home .hmc p { font-size: 12px; }
+</style>

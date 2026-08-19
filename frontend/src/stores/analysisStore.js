@@ -1,5 +1,5 @@
 import { computed, reactive } from 'vue';
-import { onlineActivities, skillData } from '../data/mockData';
+import { skillData } from '../data/mockData';
 
 const state = reactive({
   currentType: 'online',
@@ -10,14 +10,12 @@ const state = reactive({
   canvasComps: skillData.slice(0, 5).map((item) => ({ ...item })),
   defaultCanvasComps: skillData.slice(0, 5).map((item) => ({ ...item })),
   canvasInitializedFromApi: false,
+  activeTemplateName: '',
   s2Messages: [
     { role: 'ai', text: '已加载默认分析框架，支持拖拽排序、双击添加、上下移动按钮。' }
   ],
   s3Messages: [
     { role: 'ai', text: '报告已生成，可针对报告提问。' }
-  ],
-  floatingMessages: [
-    { role: 'ai', text: '活动分析助手已启动，支持拖拽、双击添加及上下移动按钮。' }
   ]
 });
 
@@ -64,10 +62,10 @@ export function useAnalysisStore() {
     }
   }
 
-  function setAllActivities(checked) {
+  function setAllActivities(checked, activities = []) {
     state.selectedActivityNames.clear();
     if (checked) {
-      onlineActivities.forEach((activity) => state.selectedActivityNames.add(activity.name));
+      activities.forEach((activity) => state.selectedActivityNames.add(activity.name));
     }
   }
 
@@ -106,7 +104,14 @@ export function useAnalysisStore() {
 
   function resetCanvas() {
     state.canvasComps.splice(0, state.canvasComps.length, ...state.defaultCanvasComps.map(cloneSkill));
+    state.activeTemplateName = '';
     addS2Message('ai', '已重置为默认分析框架。');
+  }
+
+  function applyTemplateToCanvas(skills, templateName = '') {
+    state.canvasComps.splice(0, state.canvasComps.length, ...skills.map(cloneSkill));
+    state.activeTemplateName = templateName;
+    addS2Message('ai', templateName ? `已应用模板「${templateName}」，分析组件已替换。` : '分析组件已更新。');
   }
 
   function setCanvasDefaults(skills) {
@@ -127,10 +132,6 @@ export function useAnalysisStore() {
     state.s3Messages.push({ role, text });
   }
 
-  function addFloatingMessage(role, text) {
-    state.floatingMessages.push({ role, text });
-  }
-
   return {
     state,
     selectedCount,
@@ -147,9 +148,9 @@ export function useAnalysisStore() {
     moveCanvasSkill,
     reorderCanvasSkill,
     resetCanvas,
+    applyTemplateToCanvas,
     setCanvasDefaults,
     addS2Message,
-    addS3Message,
-    addFloatingMessage
+    addS3Message
   };
 }

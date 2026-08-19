@@ -8,7 +8,7 @@ const router = useRouter();
 const store = useAnalysisStore();
 
 const activeKey = computed(() => {
-  if (route.name === 'management') return 'management';
+  if (route.name === 'main') return 'main';
   if (['source', 'compose', 'report'].includes(route.name)) return store.state.currentType;
   if (route.name === 'skills') return 'skills';
   if (route.name === 'history') return 'history';
@@ -28,10 +28,10 @@ function startAnalysis(type) {
 
 <template>
   <aside class="sb" aria-label="主导航">
-    <RouterLink class="logo" to="/management" aria-label="管理首页">
+    <RouterLink class="logo" to="/main" aria-label="管理首页">
       <i class="ti ti-chart-dots-3"></i>
     </RouterLink>
-    <RouterLink class="ni" :class="{ active: activeKey === 'management' }" to="/management">
+    <RouterLink class="ni" :class="{ active: activeKey === 'main' }" to="/main">
       <i class="ti ti-home"></i>
       <span>首页</span>
     </RouterLink>
