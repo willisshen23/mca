@@ -33,7 +33,7 @@ async def selected_activity_router_node(state: AgentState) -> dict:
             "activity_count": len(activities),
             "route_type": "multi_activity",
             "next_flow": "template_component_report",
-            "summary": "多活动分析处",
+            "summary": "多活动分析处理",
         },
         "workflow_mode": "template_component_report",
         "outbound_activity_data_found": False,
