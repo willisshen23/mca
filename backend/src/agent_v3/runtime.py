@@ -189,6 +189,7 @@ async def stream_agent_run(
     org_no: str = "",
     src_sys_no: str = "",
     channel: str = "",
+    report_components: list[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """驱动一轮 v3 对话并产出 SSE 帧。"""
     if thread_id in _cancelled:
@@ -210,6 +211,7 @@ async def stream_agent_run(
             "thread_id": thread_id,
             "request_id": request_id,
             "original_user_text": original_user_text or message,
+            "report_components": list(report_components or []),
         }
     )
 

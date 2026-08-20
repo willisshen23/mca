@@ -18,3 +18,6 @@ class ToolRequestContext(BaseModel):
     thread_id: str = ""
     request_id: str = ""
     original_user_text: str = ""
+    # 报告页「组件编排」步骤预选的分析组件（[{name, cat, desc, tpl}]）；
+    # 非空时报告管线跳过活动模板匹配，直接按此框架编排报告。
+    report_components: list[dict] = []

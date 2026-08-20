@@ -20,6 +20,8 @@ class AgentRunRequest(BaseModel):
     org_no: str = ""
     src_sys_no: str = ""
     channel: str = ""
+    # 报告页组件编排预选的分析组件（[{name, cat, desc, tpl}]），/chat-ui 不传
+    report_components: list[dict] = []
 
 
 class AgentCancelRequest(BaseModel):
@@ -38,6 +40,7 @@ async def run(body: AgentRunRequest):
         org_no=body.org_no,
         src_sys_no=body.src_sys_no,
         channel=body.channel,
+        report_components=body.report_components,
     )
     stream = await v3_runtime.start_buffered_agent_run(**kwargs)
     return StreamingResponse(

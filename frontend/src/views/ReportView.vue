@@ -158,7 +158,12 @@ async function startNewReport() {
   await chat.sendMessage({
     text: initial.text,
     uploadedFile: initial.filePath ? { file_name: ctx.fileName, file_path: initial.filePath } : null,
-    selectedRows: []
+    selectedRows: [],
+    // 组件编排步预选的分析组件随首轮请求结构化传给后端，
+    // 报告管线据此跳过活动模板匹配，直接按自选框架编排
+    reportComponents: store.state.canvasComps.map((c) => ({
+      name: c.name, cat: c.cat, desc: c.desc, tpl: c.tpl
+    }))
   });
   // sendMessage 内部已吞错（错误写入会话消息），此处按会话状态判定首条消息是否失败
   if (!latestReport.value && !conv.typing) {

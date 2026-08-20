@@ -16,7 +16,8 @@ export async function runAgentV2({
   userName = '',
   orgNo = '',
   srcSysNo = '',
-  channel = ''
+  channel = '',
+  reportComponents = []
 }) {
   // 返回原始 response，由调用方按 SSE 流读取。
   return fetch(`${API_BASE}/v2/agent/run`, {
@@ -34,7 +35,9 @@ export async function runAgentV2({
       user_name: userName,
       org_no: orgNo,
       src_sys_no: srcSysNo || getSrcSysNo(),
-      channel
+      channel,
+      // 报告页组件编排预选的分析组件；/chat-ui 传空数组，后端走原模板匹配流程
+      report_components: reportComponents
     })
   });
 }

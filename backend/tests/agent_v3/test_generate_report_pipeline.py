@@ -329,6 +329,167 @@ def test_pipeline_direct_outbound_preset_skips_fetch_and_template_chain(monkeypa
     assert calls == ["selected_activity_router", "activity_template_matching", "marketing_report_synthesis"]
 
 
+_PRESET_COMPONENTS = [
+    {"name": "活动参与率分析", "cat": "活动分析", "desc": "分析活动参与情况", "tpl": "输出示例表格"},
+    {"name": "渠道效果对比", "cat": "渠道", "desc": "对比各渠道效果", "tpl": ""},
+]
+
+
+def test_pipeline_preset_components_skip_activity_template_matching(monkeypatch):
+    """seed 带预选分析组件时：不调用活动模板匹配节点，改用预选框架构造匹配结果，
+    trace 仍按 activity_template_matching 步骤发帧（前端零改动）。"""
+    calls = []
+    _patch_pipeline(monkeypatch, calls)
+    monkeypatch.setattr(rg, "validate_report_html", lambda html: _guard_valid())
+    monkeypatch.setattr(rg, "save_report_file", lambda request_id, html: ("asset.html", 1))
+
+    events = []
+    seed = {
+        "request_id": "r-preset-comps",
+        "preset_analysis_components": _PRESET_COMPONENTS,
+        "activity_list": [{"activity_id": "act-1", "name": "测试活动"}],
+    }
+    result = asyncio.run(rg.run_report_pipeline(seed, writer=events.append))
+
+    # 模板匹配节点未执行（calls 只记录真实节点 mock）
+    assert "activity_template_matching" not in calls
+    # 但 trace 帧仍按同名步骤发出，payload 为预选框架构造的匹配结果
+    done = {e["step"]: e for e in events if e["status"] == "done"}
+    match = done["activity_template_matching"]["payload"]["activity_template_match_result"]
+    assert match["source"] == "user_selected_components"
+    assert match["template_name"] == "用户自选分析框架"
+    assert match["skill_sequence"] == ["活动参与率分析", "渠道效果对比"]
+    assert match["activity_ids"] == ["act-1"]
+    components = match["dependent_components"]
+    assert [c["skill_name"] for c in components] == ["活动参与率分析", "渠道效果对比"]
+    assert components[0]["skill_category"] == "活动分析"
+    assert components[0]["skill_description"] == "分析活动参与情况"
+    assert components[0]["skill_template_preview"] == "输出示例表格"
+    assert components[0]["position"] == 1 and components[1]["position"] == 2
+    # 报告合成正常走完整管线
+    assert calls[-1] == "marketing_report_synthesis"
+    assert result["activity_template_match_result"]["source"] == "user_selected_components"
+
+
+def test_pipeline_preset_components_uploaded_branch(monkeypatch):
+    """上传文件分支：预选组件同样跳过活动模板匹配，且 match_result 在取数前就绪。"""
+    calls = []
+    _patch_pipeline(monkeypatch, calls)
+    monkeypatch.setattr(
+        rg,
+        "uploaded_component_value_extract_node",
+        _make_node("uploaded_component_value_extract", calls, {"next_agent": "x"}),
+    )
+    monkeypatch.setattr(rg, "validate_report_html", lambda html: _guard_valid())
+    monkeypatch.setattr(rg, "save_report_file", lambda request_id, html: ("asset.html", 1))
+
+    seed = {
+        "request_id": "r-preset-up",
+        "data_source": "uploaded",
+        "preset_analysis_components": _PRESET_COMPONENTS,
+        "activity_list": [{"activity_id": "act-1", "name": "测试活动"}],
+    }
+    result = asyncio.run(rg.run_report_pipeline(seed))
+
+    assert "activity_template_matching" not in calls
+    assert "uploaded_component_value_extract" in calls
+    assert result["activity_template_match_result"]["source"] == "user_selected_components"
+
+
+def test_normalize_report_components_filters_and_caps():
+    normalized = rg._normalize_report_components(
+        _PRESET_COMPONENTS
+        + [{"desc": "无名组件"}, "not-a-dict", {"name": "  "}, {"name": "转化路径分析"}]
+    )
+    assert [c["name"] for c in normalized] == ["活动参与率分析", "渠道效果对比", "转化路径分析"]
+    assert normalized[0]["skill_category"] == "活动分析"
+    assert normalized[0]["skill_description"] == "分析活动参与情况"
+    assert normalized[0]["skill_template_preview"] == "输出示例表格"
+    assert normalized[2]["skill_category"] == ""
+    # 上限保护
+    capped = rg._normalize_report_components([{"name": f"组件{i}"} for i in range(30)])
+    assert len(capped) == rg._MAX_PRESET_COMPONENTS
+
+
+def test_generate_report_seeds_preset_from_request_and_persists(monkeypatch):
+    """工具入口：request.report_components 归一化后入 seed，并随 state_updates 持久化。"""
+    captured = {}
+
+    async def fake_pipeline(seed, writer):
+        captured["seed"] = seed
+        return {
+            "html_report": "<html><body>ok</body></html>",
+            "activity_template_match_result": {"template_name": "用户自选分析框架"},
+            "matched_data_templates": [],
+        }
+
+    monkeypatch.setattr(rg, "run_report_pipeline", fake_pipeline)
+    monkeypatch.setattr(rg, "_finish_report_run", lambda *a, **k: None)
+
+    ctx = ToolContext(
+        state={"analysis_queue": [{"activity_id": "act-1", "name": "测试活动"}]},
+        request=ToolRequestContext(
+            user_id="u1", thread_id="t-1", report_components=list(_PRESET_COMPONENTS)
+        ),
+        tool_call_id="call-preset",
+    )
+    outcome = asyncio.run(rg.generate_report(ctx))
+
+    seeded = captured["seed"]["preset_analysis_components"]
+    assert [c["name"] for c in seeded] == ["活动参与率分析", "渠道效果对比"]
+    assert outcome.state_updates["preset_analysis_components"] == seeded
+
+
+def test_generate_report_preset_falls_back_to_session_state(monkeypatch):
+    """本轮请求未带组件时沿用会话中的 preset（报告页追问重新生成的场景）。"""
+    captured = {}
+
+    async def fake_pipeline(seed, writer):
+        captured["seed"] = seed
+        return {"html_report": "<html><body>ok</body></html>"}
+
+    monkeypatch.setattr(rg, "run_report_pipeline", fake_pipeline)
+    monkeypatch.setattr(rg, "_finish_report_run", lambda *a, **k: None)
+
+    ctx = ToolContext(
+        state={
+            "analysis_queue": [{"activity_id": "act-1", "name": "测试活动"}],
+            "preset_analysis_components": list(_PRESET_COMPONENTS),
+        },
+        request=ToolRequestContext(user_id="u1", thread_id="t-1"),
+        tool_call_id="call-preset-state",
+    )
+    asyncio.run(rg.generate_report(ctx))
+
+    assert [c["name"] for c in captured["seed"]["preset_analysis_components"]] == [
+        "活动参与率分析",
+        "渠道效果对比",
+    ]
+
+
+def test_generate_report_without_preset_leaves_seed_untouched(monkeypatch):
+    """/chat-ui 路径：无 request 组件也无会话 preset 时，seed 不含预选组件（走原模板匹配）。"""
+    captured = {}
+
+    async def fake_pipeline(seed, writer):
+        captured["seed"] = seed
+        return {"html_report": "<html><body>ok</body></html>"}
+
+    monkeypatch.setattr(rg, "run_report_pipeline", fake_pipeline)
+    monkeypatch.setattr(rg, "_finish_report_run", lambda *a, **k: None)
+
+    ctx = ToolContext(
+        state={"analysis_queue": [{"activity_id": "act-1", "name": "测试活动"}]},
+        request=ToolRequestContext(user_id="u1", thread_id="t-1"),
+        tool_call_id="call-no-preset",
+    )
+    outcome = asyncio.run(rg.generate_report(ctx))
+
+    # RUNTIME_STATE_DEFAULTS 含空数组默认值，管线按空值走原模板匹配
+    assert captured["seed"].get("preset_analysis_components") == []
+    assert outcome.state_updates["preset_analysis_components"] == []
+
+
 def test_pipeline_merges_outbound_map_after_cleanup(monkeypatch):
     calls = []
     _patch_pipeline(monkeypatch, calls)

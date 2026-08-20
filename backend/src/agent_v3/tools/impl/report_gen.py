@@ -44,6 +44,7 @@ from src.report_pipeline.capabilities.uploaded_component_value_extract import (
 )
 from src.report_pipeline.defaults import RUNTIME_STATE_DEFAULTS
 from src.report_pipeline.period import compute_analysis_period
+from src.domain.report.template_skill import build_dependent_components_from_skills
 from src.agent_v3.prompts.perspectives import get_perspective, perspective_keys_text
 from src.agent_v3.tools.impl import ToolContext, ToolOutcome
 from src.agent_v3.tools.impl.common import (
@@ -384,6 +385,52 @@ def _preset_workflow_mode(
     return "template_component_report"
 
 
+_MAX_PRESET_COMPONENTS = 20
+
+
+def _normalize_report_components(raw) -> list[dict]:
+    """把报告页组件编排步传入的组件（{name, cat, desc, tpl}）归一化为
+    build_dependent_components_from_skills 认识的 skill_details 形态。"""
+    components: list[dict] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or item.get("skill_name") or "").strip()
+        if not name:
+            continue
+        components.append(
+            {
+                "name": name,
+                "skill_category": str(item.get("cat") or item.get("skill_category") or ""),
+                "skill_description": str(
+                    item.get("desc") or item.get("skill_description") or item.get("description") or ""
+                ),
+                "skill_template_preview": str(
+                    item.get("tpl") or item.get("skill_template_preview") or ""
+                ),
+            }
+        )
+        if len(components) >= _MAX_PRESET_COMPONENTS:
+            break
+    return components
+
+
+def _build_preset_framework_match(components: list[dict], activities: list[dict]) -> dict:
+    """用组件编排步预选的组件直接构造活动模板匹配结果（source=user_selected_components），
+    字段与 activity_template_matching 输出一致，下游合成/trace 渲染零改动。"""
+    names = [component["name"] for component in components]
+    return {
+        "template_id": "",
+        "template_name": "用户自选分析框架",
+        "activity_ids": [activity_key(a) for a in activities if activity_key(a)],
+        "skill_sequence": names,
+        "skill_details": components,
+        "dependent_components": build_dependent_components_from_skills(names, components),
+        "reasoning": f"使用组件编排步骤选定的 {len(names)} 个分析组件，未做活动模板匹配",
+        "source": "user_selected_components",
+    }
+
+
 # ── Step C：内部管线编排 ──
 
 # 步骤完成时透传给前端思维面板的业务数据白名单（对齐 v2 trace 面板的 step payload
@@ -453,6 +500,17 @@ async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:
     if s.get("workflow_mode") == "single_activity_outbound_first" and not is_uploaded:
         await step("outbound_activity_data_fetch", outbound_activity_data_fetch_node)
 
+    # 报告页「组件编排」预选了分析组件时，跳过活动模板匹配，直接按预选框架编排报告；
+    # 复用同名 step 发 trace 帧，前端渲染「报告分析框架」卡片（用户自选分析框架）。
+    preset_components = _normalize_report_components(s.get("preset_analysis_components"))
+
+    async def preset_framework_step(_state) -> dict:
+        return {
+            "activity_template_match_result": _build_preset_framework_match(
+                preset_components, s.get("activity_list") or []
+            )
+        }
+
     activity_template_matched = False
     if s.get("workflow_mode") != "direct_outbound_report":
         if not is_uploaded:
@@ -462,7 +520,10 @@ async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:
         else:
             # 上传文件分支依赖活动模板来组织组件指标，保持与主线工作流一致：
             # 先匹配活动模板，再提取上传数据组件值。
-            await step("activity_template_matching", activity_template_matching_node)
+            if preset_components:
+                await step("activity_template_matching", preset_framework_step)
+            else:
+                await step("activity_template_matching", activity_template_matching_node)
             activity_template_matched = True
             await step("uploaded_component_value_extract", uploaded_component_value_extract_node)
         await step("component_value_cleanup", component_value_cleanup_node)
@@ -475,7 +536,10 @@ async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:
         await step("branch_drilldown", branch_drilldown_node)
 
     if not activity_template_matched:
-        await step("activity_template_matching", activity_template_matching_node)
+        if preset_components:
+            await step("activity_template_matching", preset_framework_step)
+        else:
+            await step("activity_template_matching", activity_template_matching_node)
 
     # 合成 + HTML 守卫重试循环（复刻 report_html_guard_node 契约：
     # 失败 → 记录 issues + 清空 html_report → 合成节点自动注入重试指令）
@@ -619,7 +683,14 @@ async def generate_report(
 
     # turn 级键只从 ToolContext.request 读取（壳层不再注入 state 快照）
     original_text = str(ctx.request.original_user_text or "")
+    # 报告页组件编排预选组件：本轮请求显式传入优先，否则沿用会话中保存的 preset
+    # （报告页后续追问重新生成时继续生效）；/chat-ui 两者皆空，走原模板匹配。
+    preset_components = _normalize_report_components(
+        ctx.request.report_components
+    ) or _normalize_report_components(ctx.state.get("preset_analysis_components"))
     seed = build_report_seed(state, ctx, args, activities, original_text, outbound_map=outbound_map)
+    if preset_components:
+        seed["preset_analysis_components"] = preset_components
     writer = ctx.write_stream
 
     pipeline_started = time.monotonic()
@@ -746,6 +817,8 @@ async def generate_report(
             "html_report": html,
             "report_context": report_context,
             "report_html_guard_result": result.get("report_html_guard_result") or {},
+            # 持久化预选组件，报告页后续追问重新生成时继续按自选框架编排
+            "preset_analysis_components": preset_components,
         },
     )
 

@@ -27,3 +27,7 @@ class ToolContext:
 class ToolOutcome:
     content: str
     state_updates: dict = field(default_factory=dict)
+    # 写入会话前需按 key 做并集合并的 state 键（默认整体替换）。
+    # 用于并行工具调用竞态：impl 读到的 state 快照可能早于其他调用的写入，
+    # 合并必须推迟到壳层写入时（读-写之间无 await，事件循环内原子）执行。
+    merge_keys: tuple = ()

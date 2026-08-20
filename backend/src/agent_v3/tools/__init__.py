@@ -24,6 +24,7 @@ from src.agent_v3.tools.impl import report_modify as impl_report_modify
 from src.agent_v3.tools.impl import skill as impl_skill
 from src.agent_v3.tools.impl import template as impl_template
 from src.agent_v3.tools.impl.context import ToolRequestContext
+from src.agent_v3.tools.impl.common import activity_key
 
 logger = logging.getLogger("njbank.agent")
 
@@ -32,6 +33,7 @@ _SESSION_STATE_KEYS = (
     "analysis_queue",
     "activity_list",
     "activity_list_request_id",
+    "preset_analysis_components",
     "report_context",
     "html_report",
     "uploaded_activity_dataset",
@@ -66,6 +68,31 @@ def _make_stream_writer(session, loop):
     return write
 
 
+def _merge_activity_list_for_write(session, updates: dict) -> None:
+    """activity_list 写入前的并集合并（ToolOutcome.merge_keys 触发）。
+
+    同一轮请求（activity_list_request_id 相同）内，LLM 可能并行发起多次
+    search_activities（如逐个活动名各查一次）：各 impl 读到的 state 快照都早于
+    其他调用的写入，impl 内合并必然丢活动。合并推迟到此处执行——
+    session.get_state 与随后的 update_state 之间没有 await，在事件循环内对
+    并发工具调用是原子的，并行/顺序都安全。规则：新结果在前，按
+    activity_id/名称去重；新一轮请求整体替换，保持"最近查询结果"语义。
+    """
+    new_items = updates.get("activity_list") or []
+    request_id = updates.get("activity_list_request_id")
+    existing = session.get_state("activity_list") or []
+    if not (request_id and session.get_state("activity_list_request_id") == request_id
+            and isinstance(existing, list) and existing):
+        return
+    new_keys = {activity_key(i) or str(i.get("name") or "")
+                for i in new_items if isinstance(i, dict)}
+    updates["activity_list"] = new_items + [
+        item for item in existing
+        if isinstance(item, dict)
+        and (activity_key(item) or str(item.get("name") or "")) not in new_keys
+    ][: max(0, impl_activity_query._MAX_ACTIVITIES - len(new_items))]
+
+
 async def _run(impl_fn, args: dict) -> str:
     """组装 ToolContext → 调 impl → ToolOutcome.state_updates 写会话。"""
     try:
@@ -81,6 +108,8 @@ async def _run(impl_fn, args: dict) -> str:
     if isinstance(result, ToolOutcome):
         if result.state_updates:
             if session is not None:
+                if "activity_list" in result.merge_keys:
+                    _merge_activity_list_for_write(session, result.state_updates)
                 session.update_state(result.state_updates)
             else:
                 logger.warning("agent_v3 工具 %s 的状态更新被丢弃（无会话）: keys=%s",

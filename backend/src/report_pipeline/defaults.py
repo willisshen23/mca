@@ -40,6 +40,7 @@ RUNTIME_STATE_DEFAULTS = {
     "selected_report_activity_ids": [],
     "report_history_enabled": False,
     "activity_route_result": {},
+    "preset_analysis_components": [],
     "workflow_mode": "",
     "outbound_activity_data": {},
     "outbound_activity_data_found": False,

@@ -61,6 +61,9 @@ class AgentState(TypedDict, total=False):
     # 最近一次写入 activity_list 的 request_id：同一轮请求内多次 search_activities
     # 做并集合并，新一轮请求整体替换（见 tools/impl/activity_query.py）。
     activity_list_request_id: str
+    # 报告页组件编排预选的分析组件（[{name, cat, desc, tpl}]）：非空时管线跳过
+    # 活动模板匹配，直接按此框架编排报告（见 tools/impl/report_gen.py）。
+    preset_analysis_components: list[dict]
     awaiting_activity_selection: bool
     selected_activity_ids: list[str]
     selected_report_activity_ids: list[str]

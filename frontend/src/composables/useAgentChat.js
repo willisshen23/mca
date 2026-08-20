@@ -955,7 +955,7 @@ export function useAgentChat(options = {}) {
     }
   }
 
-  async function sendMessage({ text = '', uploadedFile = null, selectedRows = [], conversation = options.getConversation?.() } = {}) {
+  async function sendMessage({ text = '', uploadedFile = null, selectedRows = [], reportComponents = [], conversation = options.getConversation?.() } = {}) {
     const trimmedText = String(text || '').trim();
     const rows = [...(selectedRows || [])];
     if (!trimmedText && !uploadedFile?.file_path && rows.length === 0) return;
@@ -1023,7 +1023,8 @@ export function useAgentChat(options = {}) {
         userName: options.urlParams?.userName,
         orgNo: options.urlParams?.orgNo,
         srcSysNo: options.urlParams?.srcSysNo,
-        channel: options.urlParams?.channel
+        channel: options.urlParams?.channel,
+        reportComponents
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
