@@ -15,9 +15,6 @@ const state = reactive({
   activeTemplateName: '',
   s2Messages: [
     { role: 'ai', text: '已加载默认分析框架，支持拖拽排序、双击添加、上下移动按钮。' }
-  ],
-  s3Messages: [
-    { role: 'ai', text: '报告已生成，可针对报告提问。' }
   ]
 });
 
@@ -40,11 +37,6 @@ export function useAnalysisStore() {
       : state.offlineFile?.file_name || '线下活动数据',
     period: state.currentType === 'online' ? '2024-01-01 至 2024-03-31' : `${state.offlineStart || '2024-01-01'} 至 ${state.offlineEnd || '2024-03-31'}`
   }));
-  const reportTitle = computed(() => (
-    state.currentType === 'online'
-      ? '2024年Q1线上活动分析报告'
-      : '2024年线下活动综合分析报告'
-  ));
 
   function setAnalysisType(type, shouldReset = false) {
     state.currentType = type === 'offline' ? 'offline' : 'online';
@@ -146,16 +138,11 @@ export function useAnalysisStore() {
     state.s2Messages.push({ role, text });
   }
 
-  function addS3Message(role, text) {
-    state.s3Messages.push({ role, text });
-  }
-
   return {
     state,
     selectedCount,
     canGoNext,
     lockSummary,
-    reportTitle,
     setAnalysisType,
     toggleActivity,
     setAllActivities,
@@ -170,7 +157,6 @@ export function useAnalysisStore() {
     resetCanvas,
     applyTemplateToCanvas,
     setCanvasDefaults,
-    addS2Message,
-    addS3Message
+    addS2Message
   };
 }

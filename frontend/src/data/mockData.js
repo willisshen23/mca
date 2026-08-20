@@ -8,14 +8,3 @@ export const skillData = [
   { name: '产品偏好分析', cat: '客群分析', desc: '偏好建模', tpl: '1. 偏好提取\n2. 推荐策略' },
   { name: '时间序列趋势', cat: '通用分析', desc: '时序趋势识别', tpl: '1. 数据处理\n2. 趋势识别' }
 ];
-
-export const reportBars = {
-  customers: [
-    { label: '25-35岁', value: 78 },
-    { label: '36-45岁', value: 55 }
-  ],
-  channels: [
-    { label: 'APP推送', value: 92 },
-    { label: '微信H5', value: 74 }
-  ]
-};

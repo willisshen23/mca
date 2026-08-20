@@ -21,8 +21,11 @@ const urlParams = useChatUrlParams();
 const chatBody = ref(null);
 const composerRef = ref(null);
 const conversation = ref(null);
-const booting = ref(false);
 const bootError = ref('');
+// 首条消息发送失败兜底：sendMessage 内部吞错写入会话，bootError 保持空
+const initialSendFailed = ref(false);
+// 生成时间：新建取当前时间，恢复取会话快照 createdAt
+const createdAt = ref('');
 // 无会话快照且前两步无有效选择 → 空态
 const emptyState = ref(false);
 
@@ -68,6 +71,15 @@ const headerInfo = computed(() => {
 });
 
 const reportTitle = computed(() => latestReport.value?.title || '活动分析报告');
+
+// 生成时间展示：YYYY-MM-DD HH:mm 本地时间，无值时不显示
+const createdAtText = computed(() => {
+  if (!createdAt.value) return '';
+  const date = new Date(createdAt.value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+});
 
 function snapshotFromStore() {
   const isOnline = store.state.currentType === 'online';
@@ -125,6 +137,7 @@ function writeSession(conversationId, context) {
 // 直接传原始 conv 对象时，对 dynamicMessages 的修改不会触发视图更新。
 async function restoreSession(session) {
   sessionContext.value = session.context || null;
+  createdAt.value = session.createdAt || '';
   const conv = chat.createConversationState({ id: session.conversationId, title: '活动分析报告' });
   conversation.value = conv;
   await chat.loadConversation(conversation.value);
@@ -136,6 +149,7 @@ async function restoreSession(session) {
 async function startNewReport() {
   const ctx = snapshotFromStore();
   sessionContext.value = ctx;
+  createdAt.value = new Date().toISOString();
   const data = await createConversationAPI('新建分析对话');
   const conv = chat.createConversationState({ id: data.id, title: data.title || '新建分析对话' });
   conversation.value = conv;
@@ -146,12 +160,16 @@ async function startNewReport() {
     uploadedFile: initial.filePath ? { file_name: ctx.fileName, file_path: initial.filePath } : null,
     selectedRows: []
   });
+  // sendMessage 内部已吞错（错误写入会话消息），此处按会话状态判定首条消息是否失败
+  if (!latestReport.value && !conv.typing) {
+    initialSendFailed.value = true;
+  }
 }
 
 async function bootstrap() {
   const session = readSession();
-  booting.value = true;
   bootError.value = '';
+  initialSendFailed.value = false;
   emptyState.value = false;
   try {
     if (session?.conversationId) {
@@ -166,8 +184,6 @@ async function bootstrap() {
   } catch (e) {
     console.error('初始化报告页失败', e);
     bootError.value = e?.message || '初始化失败';
-  } finally {
-    booting.value = false;
   }
 }
 
@@ -234,6 +250,7 @@ function retryBoot() {
             <span><span style="color: var(--t3)">活动类型：</span>{{ headerInfo.typeName }}</span>
             <span v-if="headerInfo.period"><span style="color: var(--t3)">周期：</span>{{ headerInfo.period }}</span>
             <span v-if="headerInfo.fileName"><span style="color: var(--t3)">数据文件：</span>{{ headerInfo.fileName }}</span>
+            <span v-if="createdAtText"><span style="color: var(--t3)">生成时间：</span>{{ createdAtText }}</span>
           </div>
           <div v-if="headerInfo.activityNames?.length" style="margin-top: 6px; font-size: 12px">
             <span style="color: var(--t3)">所选活动：</span>{{ headerInfo.activityNames.join('、') }}
@@ -253,8 +270,8 @@ function retryBoot() {
           <HtmlReportCard v-if="latestReport" :message="latestReport" :chat="chat" mode="stage" />
           <div v-else class="report-placeholder">
             <i class="ti ti-loader-2 spinning" style="font-size: 24px; color: var(--primary)"></i>
-            <p>{{ bootError ? `生成失败：${bootError}，可点击下方重试` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
-            <button v-if="bootError" class="btn" type="button" @click="retryBoot">
+            <p>{{ (bootError || initialSendFailed) ? `生成失败${bootError ? `：${bootError}` : ''}，可点击下方重试` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
+            <button v-if="bootError || initialSendFailed" class="btn" type="button" @click="retryBoot">
               <i class="ti ti-refresh"></i> 重试
             </button>
           </div>
