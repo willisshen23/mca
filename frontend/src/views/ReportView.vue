@@ -325,7 +325,11 @@ function retryBoot() {
 
 <style scoped>
 .report-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--t3); }
-.report-chat-body { max-height: 420px; overflow-y: auto; padding: 4px 0; }
+/* 聊天组件（ChatMessageList/ChatComposer）的设计变量定义在 UiChatView 的 .ui-chat-page 上，
+   这里按同值补齐，否则 var(--BD)/var(--P) 等未定义会导致气泡边框、背景整条失效 */
+.report-chat { --P: #165DFF; --PL: #E8F0FF; --PH: #0E47CC; --BD: #E5E6EB; --BG: #F7F8FA; --T1: #1D2129; --T2: #4E5969; --T3: #86909C; --RAI: 16px 16px 4px 16px; --RUSER: 16px 4px 16px 16px; }
+/* 消息区用浅灰底（同 /chat-ui 页面底色），白色气泡与 slim 报告卡片才有可见边界 */
+.report-chat-body { max-height: 420px; overflow-y: auto; padding: 12px; background: var(--BG); border-radius: 8px; }
 .report-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 0; color: var(--t3); font-size: 13px; }
 .spinning { animation: report-spin 1s linear infinite; }
 @keyframes report-spin { to { transform: rotate(360deg); } }
