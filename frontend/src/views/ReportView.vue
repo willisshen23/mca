@@ -1,156 +1,320 @@
 <script setup>
-import { nextTick } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import TopBar from '../components/layout/TopBar.vue';
-import ChatPanel from '../components/common/ChatPanel.vue';
-import ReportSummary from '../components/report/ReportSummary.vue';
-import { useAnalysisStore } from '../stores/analysisStore';
+import ChatMessageList from '../components/chat/ChatMessageList.vue';
+import ChatComposer from '../components/chat/ChatComposer.vue';
+import HtmlReportCard from '../components/chat/HtmlReportCard.vue';
+import { useAnalysisStore, REPORT_SESSION_KEY } from '../stores/analysisStore';
+import { useAgentChat } from '../composables/useAgentChat';
+import { useChatUrlParams } from '../composables/useChatUrlParams';
+import { createConversationAPI, fetchConversationMessages } from '@/api/conversations.js';
+import {
+  downloadHtmlReport, installHtmlReportBridges, cancelPendingPngExports,
+  reportExportOverlay
+} from '@/utils/htmlReport.js';
 
 const router = useRouter();
 const store = useAnalysisStore();
-const lockSummary = store.lockSummary;
-const reportTitle = store.reportTitle;
+const urlParams = useChatUrlParams();
 
-function sendMessage(value) {
-  store.addS3Message('usr', value);
-  window.setTimeout(() => {
-    store.addS3Message('ai', '正在基于报告数据分析，请稍候...');
-  }, 200);
+const chatBody = ref(null);
+const composerRef = ref(null);
+const conversation = ref(null);
+const booting = ref(false);
+const bootError = ref('');
+// 无会话快照且前两步无有效选择 → 空态
+const emptyState = ref(false);
+
+function scrollBottom() {
+  nextTick(() => {
+    window.setTimeout(() => {
+      if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight;
+    }, 50);
+  });
 }
 
-async function inlineTablerIconsCss() {
+const chat = useAgentChat({
+  getConversation: () => conversation.value,
+  onScroll: () => scrollBottom(),
+  urlParams
+});
+
+// 最新报告消息（addHtmlReport 原地更新同 requestId，新报告追加，末位即当前报告）
+const latestReport = computed(() => {
+  const messages = conversation.value?.dynamicMessages || [];
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i]?.role === 'html_report' && messages[i].html) return messages[i];
+  }
+  return null;
+});
+
+const generating = computed(() => Boolean(conversation.value?.typing));
+
+// 信息头数据：优先会话快照（刷新恢复），否则取 store
+const sessionContext = ref(null);
+const headerInfo = computed(() => {
+  const ctx = sessionContext.value;
+  if (ctx) return ctx;
+  const isOnline = store.state.currentType === 'online';
+  return {
+    type: store.state.currentType,
+    typeName: isOnline ? '线上活动' : '线下活动',
+    activityNames: isOnline ? [...store.state.selectedActivityNames] : [],
+    period: store.lockSummary.value.period,
+    compNames: store.state.canvasComps.map((c) => c.name),
+    fileName: store.state.offlineFile?.file_name || ''
+  };
+});
+
+const reportTitle = computed(() => latestReport.value?.title || '活动分析报告');
+
+function snapshotFromStore() {
+  const isOnline = store.state.currentType === 'online';
+  return {
+    type: store.state.currentType,
+    typeName: isOnline ? '线上活动' : '线下活动',
+    activityNames: isOnline ? [...store.state.selectedActivityNames] : [],
+    period: store.lockSummary.value.period,
+    compNames: store.state.canvasComps.map((c) => c.name),
+    fileName: store.state.offlineFile?.file_name || '',
+    filePath: store.state.offlineFile?.file_path || '',
+    offlineStart: store.state.offlineStart,
+    offlineEnd: store.state.offlineEnd
+  };
+}
+
+function buildInitialMessage(ctx) {
+  const compPart = ctx.compNames?.length
+    ? `分析框架请包含以下组件：${ctx.compNames.join('、')}。`
+    : '';
+  if (ctx.type === 'offline') {
+    const period = ctx.offlineStart && ctx.offlineEnd ? `（统计周期 ${ctx.offlineStart} 至 ${ctx.offlineEnd}）` : '';
+    return {
+      text: `请基于上传的活动数据文件「${ctx.fileName}」${period}生成分析报告。${compPart}`,
+      filePath: ctx.filePath || ''
+    };
+  }
+  const names = (ctx.activityNames || []).map((n) => `「${n}」`).join('');
+  return { text: `请为以下线上活动生成分析报告：${names}。${compPart}`, filePath: '' };
+}
+
+function readSession() {
   try {
-    const cssText = await fetch('/lib/tabler-icons.min.css').then((r) => r.text());
-    const fontMap = {};
-    const fontRegex = /url\(["']?\.\/fonts\/([^"')]+)["']?\)/g;
-    let match;
-    while ((match = fontRegex.exec(cssText)) !== null) {
-      const rawPath = match[1];
-      fontMap[rawPath] = rawPath.split('?')[0];
-    }
-
-    await Promise.all(
-      Object.keys(fontMap).map(async (rawPath) => {
-        const cleanPath = fontMap[rawPath];
-        const res = await fetch(`/lib/fonts/${cleanPath}`);
-        if (!res.ok) throw new Error(`加载字体失败: ${cleanPath}`);
-        const blob = await res.blob();
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        fontMap[rawPath] = dataUrl;
-      })
-    );
-
-    return cssText.replace(
-      /url\(["']?\.\/fonts\/([^"')]+)["']?\)/g,
-      (full, rawPath) => `url("${fontMap[rawPath]}")`
-    );
+    const raw = localStorage.getItem(REPORT_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch (e) {
-    console.warn('内联 Tabler Icons CSS 失败，导出 HTML 可能无法显示图标', e);
-    return '';
+    return null;
   }
 }
 
-async function buildExportHtml() {
-  const content = document.querySelector('.report-content')?.innerHTML || '';
-  const currentTitle = store.reportTitle.value;
-  const tablerCss = await inlineTablerIconsCss();
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${currentTitle}</title>
-  ${tablerCss ? `<style>${tablerCss}</style>` : ''}
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; background: #F7F8FA; color: #1D2129; }
-    .sc,.rph,.rcard { background: #fff; border: 1px solid #E5E6EB; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
-    .rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .rcardt,.stitle { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .krow { display: flex; gap: 10px; }
-    .kpi { flex: 1; background: #F7F8FA; border-radius: 4px; padding: 10px; text-align: center; }
-    .kpiv { font-size: 20px; font-weight: 600; color: #165DFF; }
-    .kpil,.subtitle { font-size: 11px; color: #86909C; margin-top: 2px; }
-    .barchart { display: flex; flex-direction: column; gap: 6px; }
-    .brow { display: flex; align-items: center; gap: 8px; font-size: 11px; }
-    .blabel { width: 72px; color: #4E5969; text-align: right; flex-shrink: 0; }
-    .btrack { flex: 1; height: 14px; background: #F2F3F5; border-radius: 2px; overflow: hidden; }
-    .bfill { height: 100%; background: #165DFF; }
-    .bval { width: 32px; color: #4E5969; font-weight: 500; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .chip { background: #E8F0FF; color: #165DFF; padding: 2px 8px; border-radius: 3px; font-size: 11px; }
-    .ins { list-style: none; display: flex; flex-direction: column; gap: 5px; }
-    .insi { font-size: 12px; padding: 6px 10px; background: #F7F8FA; border-radius: 4px; border-left: 3px solid #165DFF; line-height: 1.5; }
-    .insi.w { border-left-color: #FF7D00; background: #FFF9F0; }
-    .insi.g { border-left-color: #00B42A; background: #F3FFF5; }
-    .aip { display: none; }
-  </style>
-</head>
-<body>${content}</body>
-</html>`;
+function writeSession(conversationId, context) {
+  try {
+    localStorage.setItem(REPORT_SESSION_KEY, JSON.stringify({
+      conversationId,
+      context,
+      createdAt: new Date().toISOString()
+    }));
+  } catch (e) {
+    console.warn('保存报告会话失败', e);
+  }
 }
 
-async function downloadReport(extension, mimeType) {
-  await nextTick();
-  const currentTitle = store.reportTitle.value;
-  const html = await buildExportHtml();
-  const blob = new Blob([html], { type: mimeType });
-  downloadBlob(blob, `${currentTitle}.${extension}`);
+// 刷新/恢复路径：根据快照重建会话并拉取历史
+// 注意：后续调用必须传 conversation.value（响应式代理），
+// 直接传原始 conv 对象时，对 dynamicMessages 的修改不会触发视图更新。
+async function restoreSession(session) {
+  sessionContext.value = session.context || null;
+  const conv = chat.createConversationState({ id: session.conversationId, title: '活动分析报告' });
+  conversation.value = conv;
+  await chat.loadConversation(conversation.value);
+  scrollBottom();
+  await chat.recoverAgentRun(conversation.value);
 }
 
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+// 正常路径：新建会话，组装首条消息自动开始生成
+async function startNewReport() {
+  const ctx = snapshotFromStore();
+  sessionContext.value = ctx;
+  const data = await createConversationAPI('新建分析对话');
+  const conv = chat.createConversationState({ id: data.id, title: data.title || '新建分析对话' });
+  conversation.value = conv;
+  writeSession(conv.id, ctx);
+  const initial = buildInitialMessage(ctx);
+  await chat.sendMessage({
+    text: initial.text,
+    uploadedFile: initial.filePath ? { file_name: ctx.fileName, file_path: initial.filePath } : null,
+    selectedRows: []
+  });
+}
+
+async function bootstrap() {
+  const session = readSession();
+  booting.value = true;
+  bootError.value = '';
+  emptyState.value = false;
+  try {
+    if (session?.conversationId) {
+      await restoreSession(session);
+      return;
+    }
+    if (!store.canGoNext.value) {
+      emptyState.value = true;
+      return;
+    }
+    await startNewReport();
+  } catch (e) {
+    console.error('初始化报告页失败', e);
+    bootError.value = e?.message || '初始化失败';
+  } finally {
+    booting.value = false;
+  }
+}
+
+let uninstallBridges = null;
+onMounted(() => {
+  uninstallBridges = installHtmlReportBridges();
+  bootstrap();
+});
+
+onBeforeUnmount(() => {
+  uninstallBridges?.();
+  cancelPendingPngExports();
+});
+
+function scrollToReport() {
+  nextTick(() => {
+    document.querySelector('.report-stage')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function scrollToRunningTrace() {
+  const conv = conversation.value;
+  const trace = conv?.dynamicMessages?.find((m) => m.role === 'execution_trace' && m.status === 'running');
+  if (!trace || !chatBody.value) return;
+  const index = conv.dynamicMessages.indexOf(trace);
+  nextTick(() => {
+    const target = chatBody.value.querySelector(`[data-trace-index="${index}"]`);
+    if (target) chatBody.value.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
+  });
+}
+
+function exportReport() {
+  if (latestReport.value) downloadHtmlReport(latestReport.value);
+}
+
+function retryBoot() {
+  store.resetReportSession();
+  bootstrap();
 }
 </script>
 
 <template>
   <div class="page">
     <TopBar current-label="分析报告" :step="3" />
-    <div class="content report-content">
-      <section class="rph">
-        <div style="font-size: 14px; font-weight: 600; display: flex; gap: 8px">
-          <i class="ti ti-file-analytics" style="color: var(--primary)"></i>
-          <span>{{ reportTitle }}</span>
-        </div>
-        <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; flex-wrap: wrap">
-          <span><span style="color: var(--t3)">活动类型：</span>{{ lockSummary.typeName }}</span>
-          <span><span style="color: var(--t3)">周期：</span>{{ lockSummary.period }}</span>
-          <span><span style="color: var(--t3)">生成：</span>2024-04-01</span>
-        </div>
-        <div class="chips">
-          <span v-for="skill in store.state.canvasComps" :key="skill.name" class="chip">{{ skill.name }}</span>
-        </div>
-      </section>
 
-      <ReportSummary />
-
-      <section class="sc">
-        <div class="sh">
-          <i class="ti ti-message-question" style="color: var(--primary)"></i>
-          <span class="stitle">AI报告问答</span>
-        </div>
-        <ChatPanel :messages="store.state.s3Messages" title="AI报告问答" placeholder="提问..." @send="sendMessage" />
-      </section>
+    <!-- 空态：未经前两步直接进入 -->
+    <div v-if="emptyState" class="content report-empty">
+      <i class="ti ti-info-circle" style="font-size: 32px; color: var(--t3)"></i>
+      <p>请先从第一步选择要分析的活动或上传线下数据</p>
+      <button class="btn pri" type="button" @click="router.push({ name: 'source', params: { type: 'online' } })">
+        去选择活动
+      </button>
     </div>
-    <div class="fbar">
-      <button class="btn" type="button" @click="router.push({ name: 'compose' })">
-        <i class="ti ti-arrow-left"></i> 返回调整
-      </button>
-      <button class="btn pri" type="button" @click="downloadReport('html', 'text/html')">
-        <i class="ti ti-code"></i> 导出HTML
-      </button>
+
+    <template v-else>
+      <div class="content report-content">
+        <!-- 信息头：真实选择数据 -->
+        <section class="rph">
+          <div style="font-size: 14px; font-weight: 600; display: flex; gap: 8px">
+            <i class="ti ti-file-analytics" style="color: var(--primary)"></i>
+            <span>{{ reportTitle }}</span>
+          </div>
+          <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; flex-wrap: wrap">
+            <span><span style="color: var(--t3)">活动类型：</span>{{ headerInfo.typeName }}</span>
+            <span v-if="headerInfo.period"><span style="color: var(--t3)">周期：</span>{{ headerInfo.period }}</span>
+            <span v-if="headerInfo.fileName"><span style="color: var(--t3)">数据文件：</span>{{ headerInfo.fileName }}</span>
+          </div>
+          <div v-if="headerInfo.activityNames?.length" style="margin-top: 6px; font-size: 12px">
+            <span style="color: var(--t3)">所选活动：</span>{{ headerInfo.activityNames.join('、') }}
+          </div>
+          <div class="chips">
+            <span v-for="name in headerInfo.compNames" :key="name" class="chip">{{ name }}</span>
+          </div>
+        </section>
+
+        <!-- 报告区 -->
+        <section class="sc report-stage">
+          <div class="sh">
+            <i class="ti ti-report" style="color: var(--primary)"></i>
+            <span class="stitle">分析报告</span>
+            <span v-if="generating" style="font-size: 12px; color: var(--t3)">正在生成…</span>
+          </div>
+          <HtmlReportCard v-if="latestReport" :message="latestReport" :chat="chat" mode="stage" />
+          <div v-else class="report-placeholder">
+            <i class="ti ti-loader-2 spinning" style="font-size: 24px; color: var(--primary)"></i>
+            <p>{{ bootError ? `生成失败：${bootError}，可在下方对话框重新发送需求` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
+            <button v-if="bootError" class="btn" type="button" @click="retryBoot">
+              <i class="ti ti-refresh"></i> 重试
+            </button>
+          </div>
+        </section>
+
+        <!-- AI 问答区 -->
+        <section class="sc report-chat">
+          <div class="sh">
+            <i class="ti ti-message-question" style="color: var(--primary)"></i>
+            <span class="stitle">AI报告问答</span>
+          </div>
+          <div ref="chatBody" class="report-chat-body">
+            <ChatMessageList
+              v-if="conversation"
+              :chat="chat"
+              :conversation="conversation"
+              report-card-mode="slim"
+              @focus-composer="composerRef?.focus()"
+              @locate-report="scrollToReport"
+            />
+          </div>
+          <ChatComposer
+            v-if="conversation"
+            ref="composerRef"
+            :chat="chat"
+            :conversation="conversation"
+            @locate-trace="scrollToRunningTrace"
+          />
+        </section>
+      </div>
+
+      <div class="fbar">
+        <button class="btn" type="button" @click="router.push({ name: 'compose' })">
+          <i class="ti ti-arrow-left"></i> 返回调整
+        </button>
+        <button class="btn pri" type="button" :disabled="!latestReport" @click="exportReport">
+          <i class="ti ti-download"></i> 导出HTML
+        </button>
+      </div>
+    </template>
+
+    <div v-if="reportExportOverlay.visible" class="report-export-overlay" role="status">
+      <div class="report-export-loading">
+        <i class="ti ti-loader-2 report-export-spinner"></i>
+        <span>{{ reportExportOverlay.label }}</span>
+        <small>请稍候，不要关闭当前页面</small>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.report-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--t3); }
+.report-chat-body { max-height: 420px; overflow-y: auto; padding: 4px 0; }
+.report-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 0; color: var(--t3); font-size: 13px; }
+.spinning { animation: report-spin 1s linear infinite; }
+@keyframes report-spin { to { transform: rotate(360deg); } }
+/* 导出遮罩（UiChatView 中为组件 scoped 样式，这里按报告页变量补齐） */
+.report-export-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, .34); backdrop-filter: blur(2px); }
+.report-export-loading { min-width: 240px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 28px; border: .5px solid rgba(255, 255, 255, .7); border-radius: 14px; background: rgba(255, 255, 255, .96); color: var(--t1); font-size: 14px; font-weight: 700; box-shadow: 0 18px 48px rgba(15, 23, 42, .2); }
+.report-export-loading small { color: var(--t3); font-size: 11px; font-weight: 400; }
+.report-export-spinner { color: var(--primary); font-size: 34px; animation: report-spin .9s linear infinite; }
+</style>
