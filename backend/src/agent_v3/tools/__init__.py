@@ -31,6 +31,7 @@ logger = logging.getLogger("njbank.agent")
 _SESSION_STATE_KEYS = (
     "analysis_queue",
     "activity_list",
+    "activity_list_request_id",
     "report_context",
     "html_report",
     "uploaded_activity_dataset",

@@ -58,6 +58,9 @@ class AgentState(TypedDict, total=False):
     marketing_intent: dict
     activity_query_params: dict
     activity_list: list[dict]
+    # 最近一次写入 activity_list 的 request_id：同一轮请求内多次 search_activities
+    # 做并集合并，新一轮请求整体替换（见 tools/impl/activity_query.py）。
+    activity_list_request_id: str
     awaiting_activity_selection: bool
     selected_activity_ids: list[str]
     selected_report_activity_ids: list[str]

@@ -91,6 +91,19 @@ async def search_activities(
     if not compacted:
         return error_content("未查询到符合条件的活动，建议放宽关键词或日期范围后重试")
 
+    # 同一轮请求内多次按名查询时合并结果（新结果在前，按 activity_id/名称去重），
+    # 避免“逐个活动名各查一次”时后一次覆盖前一次、路由只能看到最后一个活动；
+    # 新一轮请求则整体替换，保持“最近查询结果”语义。
+    merged = compacted
+    request_id = ctx.request.request_id
+    existing = ctx.state.get("activity_list") or []
+    if request_id and ctx.state.get("activity_list_request_id") == request_id and existing:
+        new_keys = {activity_key(item) or str(item.get("name") or "") for item in compacted}
+        merged = compacted + [
+            item for item in existing
+            if isinstance(item, dict) and (activity_key(item) or str(item.get("name") or "")) not in new_keys
+        ][: max(0, _MAX_ACTIVITIES - len(compacted))]
+
     content = ok_content(
         {
             "count": len(compacted),
@@ -101,7 +114,7 @@ async def search_activities(
             ),
         }
     )
-    return ToolOutcome(content, {"activity_list": compacted})
+    return ToolOutcome(content, {"activity_list": merged, "activity_list_request_id": request_id})
 
 
 async def get_activity_detail(ctx: ToolContext, activity_id: str) -> str:

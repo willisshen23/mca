@@ -83,6 +83,76 @@ def test_get_activity_detail_passes_src_sys_no_from_context(monkeypatch):
     assert captured["srcSysNo"] == "S05"
 
 
+def test_search_activities_merges_within_same_request(monkeypatch):
+    """同一轮请求内多次按名查询：结果按 activity_id 去重合并（新结果在前），
+    避免逐个活动名查询时后一次覆盖前一次，路由只能看到最后一个活动。"""
+    state = {
+        "activity_list": [
+            {"activity_id": "act_001", "name": "个养缴存营销-滨江支行", "row_number": 1},
+        ],
+        "activity_list_request_id": "req-1",
+    }
+    monkeypatch.setattr(
+        aq,
+        "fetch_activity_list",
+        lambda params: _api_result([{"actNo": "act_002", "actName": "个养开户营销-滨江支行"}]),
+    )
+
+    result = asyncio.run(aq.search_activities(_ctx(state=state, request_id="req-1"), keyword="个养开户营销-滨江支行"))
+
+    update = result.state_updates
+    ids = [item["activity_id"] for item in update["activity_list"]]
+    assert ids == ["act_002", "act_001"]
+    assert update["activity_list_request_id"] == "req-1"
+    # 工具内容（给模型/用户看的本次查询结果）不受合并影响
+    payload = json.loads(result.content)
+    assert payload["count"] == 1
+
+
+def test_search_activities_replaces_on_new_request(monkeypatch):
+    """跨请求（新一轮对话）查询整体替换，保持"最近查询结果"语义，
+    避免上一轮的旧活动残留影响本轮路由。"""
+    state = {
+        "activity_list": [
+            {"activity_id": "act_001", "name": "个养缴存营销-滨江支行", "row_number": 1},
+        ],
+        "activity_list_request_id": "req-1",
+    }
+    monkeypatch.setattr(
+        aq,
+        "fetch_activity_list",
+        lambda params: _api_result([{"actNo": "act_002", "actName": "个养开户营销-滨江支行"}]),
+    )
+
+    result = asyncio.run(aq.search_activities(_ctx(state=state, request_id="req-2"), keyword="个养开户营销-滨江支行"))
+
+    update = result.state_updates
+    ids = [item["activity_id"] for item in update["activity_list"]]
+    assert ids == ["act_002"]
+    assert update["activity_list_request_id"] == "req-2"
+
+
+def test_search_activities_merge_dedupes_same_activity(monkeypatch):
+    """同一轮内重复查询同一活动时不产生重复条目。"""
+    state = {
+        "activity_list": [
+            {"activity_id": "act_001", "name": "个养缴存营销-滨江支行", "row_number": 1},
+            {"activity_id": "act_009", "name": "年终回馈", "row_number": 2},
+        ],
+        "activity_list_request_id": "req-1",
+    }
+    monkeypatch.setattr(
+        aq,
+        "fetch_activity_list",
+        lambda params: _api_result([{"actNo": "act_001", "actName": "个养缴存营销-滨江支行"}]),
+    )
+
+    result = asyncio.run(aq.search_activities(_ctx(state=state, request_id="req-1"), keyword="个养缴存"))
+
+    ids = [item["activity_id"] for item in result.state_updates["activity_list"]]
+    assert ids == ["act_001", "act_009"]
+
+
 def test_search_activities_api_failure_returns_error(monkeypatch):
     monkeypatch.setattr(aq, "fetch_activity_list", lambda params: _api_result(None, success=False, error="timeout"))
 
