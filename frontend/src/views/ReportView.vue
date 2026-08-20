@@ -8,7 +8,7 @@ import HtmlReportCard from '../components/chat/HtmlReportCard.vue';
 import { useAnalysisStore, REPORT_SESSION_KEY } from '../stores/analysisStore';
 import { useAgentChat } from '../composables/useAgentChat';
 import { useChatUrlParams } from '../composables/useChatUrlParams';
-import { createConversationAPI, fetchConversationMessages } from '@/api/conversations.js';
+import { createConversationAPI } from '@/api/conversations.js';
 import {
   downloadHtmlReport, installHtmlReportBridges, cancelPendingPngExports,
   reportExportOverlay
@@ -253,7 +253,7 @@ function retryBoot() {
           <HtmlReportCard v-if="latestReport" :message="latestReport" :chat="chat" mode="stage" />
           <div v-else class="report-placeholder">
             <i class="ti ti-loader-2 spinning" style="font-size: 24px; color: var(--primary)"></i>
-            <p>{{ bootError ? `生成失败：${bootError}，可在下方对话框重新发送需求` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
+            <p>{{ bootError ? `生成失败：${bootError}，可点击下方重试` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
             <button v-if="bootError" class="btn" type="button" @click="retryBoot">
               <i class="ti ti-refresh"></i> 重试
             </button>
