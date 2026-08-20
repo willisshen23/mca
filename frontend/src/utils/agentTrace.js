@@ -306,6 +306,7 @@ export function tracePayloadForStep(step, payload = {}) {
   }
   if (step === 'component_value_fetch') {
     return {
+      ...(payload.component_value_fetch_summary ? { component_value_fetch_summary: payload.component_value_fetch_summary } : {}),
       ...(payload.component_value_params ? { component_value_params: payload.component_value_params } : {}),
       ...(payload.component_values ? { component_values: payload.component_values } : {})
     };
@@ -445,43 +446,39 @@ export function activityRouteSummary(step) {
   return '';
 }
 
-// 数据模板匹配结果：优先 template_match_result（含 matched_data_templates），
-// 否则取 matched_data_templates 首位作为主匹配。
-export function templateMatchResult(step) {
-  if (isPendingStep(step)) return null;
-  const payload = step?.payload || {};
-  if (payload.template_match_result) return payload.template_match_result;
-  const list = payload.matched_data_templates;
-  return Array.isArray(list) && list.length > 0 ? list[0] : null;
-}
-
-export function templateMatchCandidates(step) {
-  if (isPendingStep(step)) return [];
-  const payload = step?.payload || {};
-  const list = payload.matched_data_templates || payload.template_match_result?.matched_data_templates || [];
-  return Array.isArray(list) ? list : [];
-}
-
 export function activityTemplateMatchResult(step) {
   if (isPendingStep(step)) return null;
   return step?.payload?.activity_template_match_result || null;
 }
 
-export function templateListNames(step) {
-  const list = step?.payload?.template_list;
-  if (!Array.isArray(list)) return [];
-  return list.map((item) => item?.template_name || item?.name || '').filter(Boolean);
+// 组件数值获取摘要（后端 _step_trace_payload 注入 component_value_fetch_summary）：
+// template_list_fetch/template_matching/component_value_fetch/component_value_cleanup
+// 合并为 data_pipeline_merged 步骤后 payload 随之合并，按 payload 判断而非节点名。
+export function componentValueFetchSummary(step) {
+  if (isPendingStep(step)) return null;
+  const summary = step?.payload?.component_value_fetch_summary;
+  if (!summary) return null;
+  return (summary.metric_count > 0 || summary.error_count > 0) ? summary : null;
 }
 
-// 展示条件：非等待态直接看 payload（template_list_fetch/template_matching 会被合并进
-// data_pipeline_merged 步骤，payload 随之合并，按节点名判断会漏掉合并步骤）；
-// 等待态只在原子步骤上显示“等待执行”，避免合并步骤出现占位详情框。
-export function showTemplateMatchDetail(step) {
-  if (isPendingStep(step)) return stepKey(step) === 'template_matching';
-  return Boolean(templateMatchResult(step) || (step?.payload && step.payload.template_match_result));
+export function componentValueCleanupResult(step) {
+  if (isPendingStep(step)) return null;
+  return step?.payload?.component_value_cleanup_result || null;
 }
 
-export function showTemplateListDetail(step) {
-  if (isPendingStep(step)) return stepKey(step) === 'template_list_fetch';
-  return Array.isArray(step?.payload?.template_list);
+export function componentValueCleanupText(step) {
+  const result = componentValueCleanupResult(step);
+  if (!result) return '';
+  const removedValues = Number(result.removed_values) || 0;
+  const removedParams = Number(result.removed_params) || 0;
+  if (!removedValues && !removedParams) return '数据完整，无需清理';
+  const parts = [];
+  if (removedValues) parts.push(`清理空指标 ${removedValues} 项`);
+  if (removedParams) parts.push(`清理空参数 ${removedParams} 项`);
+  return parts.join('，');
 }
+
+// 数据模板匹配/分析能力清单不再在思维面板展示（报告页与 /chat-ui 均改为展示
+// 组件数值获取与数据清理的真实步骤数据），templateMatchResult /
+// templateMatchCandidates / templateListNames / showTemplateMatchDetail /
+// showTemplateListDetail 已随展示块一并移除。

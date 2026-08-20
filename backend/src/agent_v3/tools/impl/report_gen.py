@@ -441,17 +441,79 @@ _STEP_TRACE_PAYLOAD_KEYS = {
     "outbound_activity_data_fetch": ("outbound_activity_data_found",),
     "template_list_fetch": ("template_list",),
     "template_matching": ("template_match_result", "matched_data_templates"),
+    "component_value_fetch": (),
     "component_value_cleanup": ("component_value_cleanup_result",),
     "activity_template_matching": ("activity_template_match_result",),
 }
 
+# 组件取数 trace 摘要上限：供前端 chips 展示，避免 trace 帧携带整个 component_values 大对象
+_MAX_TRACE_FETCH_METRICS = 20
+_MAX_TRACE_FETCH_TEMPLATES = 10
+
+
+def _count_fetched_metrics(value) -> int:
+    """组件取数值的指标计数：list 为板块列表（板块内含指标明细），dict 为指标→数值。"""
+    if isinstance(value, list):
+        return sum(
+            len(plate.get("plateShowIndCfgInfDtoList") or [])
+            for plate in value
+            if isinstance(plate, dict)
+        )
+    if isinstance(value, dict):
+        return len(value)
+    return 1
+
+
+def _component_value_fetch_summary(state: dict) -> dict:
+    """组件数值获取的紧凑 trace 摘要：指标总数 + 按数据模板分组明细 + 取数失败数。
+
+    component_values 的合并键有两种形态：按模板分组（键为 template_id，值是板块
+    列表）时借助 template_component_values 取模板名；未分组的键（dict 合并分支）
+    直接作为指标名展示，"template_id:指标" 冲突键去掉模板前缀。
+    """
+    payload = state.get("component_values") or {}
+    values = payload.get("component_values")
+    errors = payload.get("errors") or []
+    if not isinstance(values, dict):
+        values = {}
+    meta = payload.get("template_component_values")
+    meta = meta if isinstance(meta, dict) else {}
+
+    templates: list[dict] = []
+    loose_metrics: list[str] = []
+    for key, value in values.items():
+        info = meta.get(key)
+        if isinstance(info, dict):
+            templates.append({
+                "template_name": info.get("template_name") or str(key),
+                "metric_count": _count_fetched_metrics(value),
+            })
+            continue
+        name = str(key)
+        prefix, _, rest = name.partition(":")
+        if rest and prefix in meta:
+            name = rest
+        loose_metrics.append(name)
+
+    return {
+        "metric_count": sum(t["metric_count"] for t in templates) + len(loose_metrics),
+        "templates": templates[:_MAX_TRACE_FETCH_TEMPLATES],
+        "metrics": sorted(loose_metrics)[:_MAX_TRACE_FETCH_METRICS],
+        "error_count": len(errors) if isinstance(errors, list) else 0,
+    }
+
 
 def _step_trace_payload(name: str, state: dict) -> dict:
-    keys = _STEP_TRACE_PAYLOAD_KEYS.get(name)
-    if not keys:
+    if name not in _STEP_TRACE_PAYLOAD_KEYS:
         return {}
     # False/0 是合法业务值（如 outbound_activity_data_found=False），只过滤空容器
-    return {key: state[key] for key in keys if state.get(key) not in (None, "", [], {})}
+    keys = _STEP_TRACE_PAYLOAD_KEYS[name]
+    payload = {key: state[key] for key in keys if state.get(key) not in (None, "", [], {})}
+    if name == "component_value_fetch":
+        summary = _component_value_fetch_summary(state)
+        if summary["metric_count"] or summary["error_count"]:
+            payload["component_value_fetch_summary"] = summary
+    return payload
 
 
 async def run_report_pipeline(seed: dict, writer=lambda _event: None) -> dict:

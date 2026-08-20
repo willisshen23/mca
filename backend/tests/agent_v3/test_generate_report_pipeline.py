@@ -523,3 +523,70 @@ def test_merge_outbound_into_component_values_unit():
     # 空数据不并入
     merged2 = rg._merge_outbound_into_component_values(component_values, {"act-10": {}})
     assert "outbound:act-10" not in merged2["component_values"]
+
+
+def test_step_trace_payload_component_value_fetch_summary():
+    """组件数值获取的 trace payload 是紧凑摘要（指标总数/模板分组/失败数），不携带原始大对象。"""
+    state = {
+        "component_values": {
+            "component_values": {
+                # 按模板分组（值为板块列表，指标在 plateShowIndCfgInfDtoList 内）
+                "DT-1": [
+                    {"plateShowIndCfgInfDtoList": [{"indexName": "a"}, {"indexName": "b"}]},
+                    {"plateShowIndCfgInfDtoList": [{"indexName": "c"}]},
+                ],
+                # 未分组键作为指标名；"DT-2:x" 冲突键去掉模板前缀
+                "deposit_increase": 1,
+                "DT-2:wealth_increase": 2,
+            },
+            "template_component_values": {
+                "DT-1": {"template_id": "DT-1", "template_name": "模板A"},
+                "DT-2": {"template_id": "DT-2", "template_name": "模板B"},
+            },
+            "errors": [{"template_id": "DT-2", "error": "timeout"}],
+        }
+    }
+    payload = rg._step_trace_payload("component_value_fetch", state)
+    assert payload == {
+        "component_value_fetch_summary": {
+            "metric_count": 5,
+            "templates": [{"template_name": "模板A", "metric_count": 3}],
+            "metrics": ["deposit_increase", "wealth_increase"],
+            "error_count": 1,
+        }
+    }
+
+
+def test_step_trace_payload_component_value_fetch_empty_summary_omitted():
+    """无指标且无失败时不携带摘要键（done 帧保持无 payload）。"""
+    assert rg._step_trace_payload("component_value_fetch", {"component_values": {}}) == {}
+    assert rg._step_trace_payload("component_value_fetch", {}) == {}
+
+
+def test_pipeline_component_value_fetch_done_carries_summary(monkeypatch):
+    """管线 done 帧把取数摘要带给前端思维面板。"""
+    calls = []
+    _patch_pipeline(monkeypatch, calls)
+    monkeypatch.setattr(
+        rg,
+        "component_value_fetch_node",
+        _make_node("component_value_fetch", calls, {
+            "next_agent": "x",
+            "component_values": {
+                "component_values": {"DT-1": [{"plateShowIndCfgInfDtoList": [{"indexName": "a"}, {"indexName": "b"}]}]},
+                "template_component_values": {"DT-1": {"template_id": "DT-1", "template_name": "模板A"}},
+                "errors": [{"template_id": "DT-2", "error": "timeout"}],
+            },
+        }),
+    )
+    monkeypatch.setattr(rg, "validate_report_html", lambda html: _guard_valid())
+    monkeypatch.setattr(rg, "save_report_file", lambda request_id, html: ("asset.html", 1))
+
+    events = []
+    asyncio.run(rg.run_report_pipeline({"request_id": "r-fetch"}, writer=events.append))
+
+    done = {e["step"]: e for e in events if e["status"] == "done"}
+    summary = done["component_value_fetch"]["payload"]["component_value_fetch_summary"]
+    assert summary["metric_count"] == 2
+    assert summary["templates"] == [{"template_name": "模板A", "metric_count": 2}]
+    assert summary["error_count"] == 1

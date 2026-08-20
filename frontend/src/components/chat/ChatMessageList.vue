@@ -7,9 +7,9 @@ import { renderMarkdown } from '@/utils/markdown.js';
 import { displayActivityStatus, replaceActivityStatusCodes } from '@/utils/activityDictionaries.js';
 import {
   visibleTraceSteps, traceProgressText, thinkingTitleText, shouldDisplayThinkingTrace,
-  stepKey, isTraceNode, isPendingStep, showTemplateMatchDetail, showTemplateListDetail,
-  templateMatchResult, templateMatchCandidates, activityTemplateMatchResult,
-  templateListNames, activityTraceLabel, activityRouteSummary
+  stepKey, isTraceNode, isPendingStep, activityTemplateMatchResult,
+  componentValueFetchSummary, componentValueCleanupText,
+  activityTraceLabel, activityRouteSummary
 } from '@/utils/agentTrace.js';
 import {
   activityName, activityId, activityRowNumber, activityPeriod, activityTags,
@@ -224,28 +224,28 @@ function handleMarkdownActivityTableClick(event, message) {
                 <div class="detail-label">意图识别</div>
                 <div class="detail-value">{{ step.payload.marketing_intent.intent_type }} — {{ step.payload.marketing_intent.scene }}</div>
               </div>
-              <div v-if="showTemplateListDetail(step)" class="trace-step-detail">
-                <div class="detail-label">分析能力</div>
-                <div v-if="isPendingStep(step)" class="detail-value">等待执行</div>
-                <details v-else-if="templateListNames(step).length" class="capability-list">
-                  <summary>
-                    <i class="ti ti-chevron-right capability-list-chevron" aria-hidden="true"></i>
-                    已加载 {{ templateListNames(step).length }} 项分析能力
-                  </summary>
-                  <div class="capability-list-body">
-                    <span v-for="name in templateListNames(step)" :key="name" class="capability-chip">{{ name }}</span>
-                  </div>
-                </details>
-                <div v-else class="detail-value">已加载 {{ step.payload.template_list.length }} 项分析能力</div>
+              <div v-if="componentValueFetchSummary(step)" class="trace-step-detail">
+                <div class="detail-label">组件数值获取</div>
+                <div class="detail-value">
+                  已计算 {{ componentValueFetchSummary(step).metric_count }} 项指标<template v-if="componentValueFetchSummary(step).error_count">，{{ componentValueFetchSummary(step).error_count }} 项取数失败</template>
+                </div>
+                <div v-if="componentValueFetchSummary(step).templates?.length || componentValueFetchSummary(step).metrics?.length" class="metric-chip-list">
+                  <span
+                    v-for="tpl in componentValueFetchSummary(step).templates || []"
+                    :key="tpl.template_name"
+                    class="capability-chip"
+                  >{{ tpl.template_name }} · {{ tpl.metric_count }} 项</span>
+                  <span
+                    v-for="metric in componentValueFetchSummary(step).metrics || []"
+                    :key="metric"
+                    class="capability-chip"
+                  >{{ metric }}</span>
+                </div>
               </div>
-              <TraceTemplateMatch
-                v-if="showTemplateMatchDetail(step)"
-                label="分析模板匹配"
-                :pending="isPendingStep(step)"
-                :result="templateMatchResult(step)"
-                :candidates="templateMatchCandidates(step)"
-                empty-text="已根据活动数据完成分析模板匹配"
-              />
+              <div v-if="componentValueCleanupText(step)" class="trace-step-detail">
+                <div class="detail-label">数据清理</div>
+                <div class="detail-value">{{ componentValueCleanupText(step) }}</div>
+              </div>
               <TraceTemplateMatch
                 v-if="isTraceNode(step, 'activity_template_matching') && (isPendingStep(step) || activityTemplateMatchResult(step))"
                 label="报告分析框架"
@@ -386,13 +386,7 @@ function handleMarkdownActivityTableClick(event, message) {
 .trace-step-detail { display: flex; flex-direction: column; margin-top: 6px; padding: 6px 10px; background: #fff; border-radius: 6px; border: .5px solid var(--BD); }
 .detail-label { order: 1; font-size: 10px; color: var(--T3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
 .detail-value { order: 2; font-size: 12px; color: var(--T1); font-weight: 500; }
-.capability-list { order: 2; }
-.capability-list summary { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--T1); cursor: pointer; list-style: none; user-select: none; }
-.capability-list summary::-webkit-details-marker { display: none; }
-.capability-list summary:hover { color: var(--P); }
-.capability-list-chevron { font-size: 12px; color: var(--T3); transition: transform .15s ease; }
-.capability-list[open] > summary .capability-list-chevron { transform: rotate(90deg); }
-.capability-list-body { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.metric-chip-list { order: 3; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .capability-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--BG); border: .5px solid var(--BD); color: var(--T2); font-size: 11px; font-weight: 500; line-height: 1; white-space: nowrap; }
 .activity-list-preview { order: 3; display: grid; gap: 8px; margin: 8px 0 0; }
 .activity-preview-item { padding: 8px 10px; border: .5px solid var(--BD); border-radius: 8px; background: var(--BG); }
