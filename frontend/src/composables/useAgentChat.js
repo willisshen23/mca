@@ -21,6 +21,11 @@ import {
 } from '@/utils/activityFormat.js';
 import { stripReportFooterNote } from '@/utils/htmlReport.js';
 import {
+  safeSetItem,
+  CHAT_STORAGE_PREFIX,
+  RUN_SEQUENCE_PREFIX
+} from '@/utils/safeStorage.js';
+import {
   fetchConversationMessages,
   createConversationAPI,
   renameConversationAPI,
@@ -71,9 +76,6 @@ export function useAgentChat(options = {}) {
     return `${prefix}${error?.message || error || '未知错误'}`;
   }
 
-  const STORAGE_PREFIX = 'chat_dynamic_messages:';
-  const RUN_SEQUENCE_PREFIX = 'agent_run_sequence:';
-
   // 页面卸载标记：全页面唯一一套（持久化与流式引擎共用），
   // 刷新/离开页面时流式消费不再写入兜底错误消息。
   let pageUnloading = false;
@@ -112,7 +114,7 @@ export function useAgentChat(options = {}) {
   }
 
   function storageKey(conversationId) {
-    return `${STORAGE_PREFIX}${conversationId}`;
+    return `${CHAT_STORAGE_PREFIX}${conversationId}`;
   }
 
   function runSequenceKey(conversationId) {
@@ -124,10 +126,8 @@ export function useAgentChat(options = {}) {
   }
 
   function setRunSequence(conversationId, sequence) {
-    try {
-      localStorage.setItem(runSequenceKey(conversationId), String(Math.max(0, sequence || 0)));
-    } catch (e) {
-      console.warn('保存任务续传位置失败', e);
+    if (!safeSetItem(runSequenceKey(conversationId), String(Math.max(0, sequence || 0)))) {
+      console.warn('保存任务续传位置失败（存储已满且无缓存可清理）');
     }
   }
 
@@ -192,13 +192,18 @@ export function useAgentChat(options = {}) {
 
   function persistConversation(conversation = options.getConversation?.()) {
     if (!conversation?.id) return;
+    // safeSetItem 在配额满时会淘汰最旧的会话缓存后重试
+    let messages;
     try {
-      const messages = (conversation.dynamicMessages || [])
+      messages = (conversation.dynamicMessages || [])
         .map(compactMessageForStorage)
         .filter(Boolean);
-      localStorage.setItem(storageKey(conversation.id), JSON.stringify(messages));
     } catch (e) {
-      console.warn('保存对话过程失败', e);
+      console.warn('压缩对话消息失败', e);
+      return;
+    }
+    if (!safeSetItem(storageKey(conversation.id), JSON.stringify(messages))) {
+      console.warn('保存对话过程失败（存储已满且无缓存可清理）');
     }
   }
 
@@ -975,8 +980,7 @@ export function useAgentChat(options = {}) {
         conversation.id = data.id;
         options.onConversationIdMigrated?.(oldId, data.id);
         const cached = localStorage.getItem(storageKey(oldId));
-        if (cached) {
-          localStorage.setItem(storageKey(data.id), cached);
+        if (cached && safeSetItem(storageKey(data.id), cached)) {
           localStorage.removeItem(storageKey(oldId));
         }
       } catch (e) {

@@ -31,7 +31,7 @@ function onDownloadPng() {
     </div>
   </div>
 
-  <div v-else class="html-report-card">
+  <div v-else class="html-report-card" :class="{ stage: mode === 'stage' }">
     <div class="html-report-head">
       <div>
         <div class="html-report-title">{{ message.title }}</div>
@@ -169,6 +169,10 @@ function onDownloadPng() {
 .html-download-btn.secondary:hover { border-color: var(--P); background: #eff6ff; color: var(--P); }
 .html-download-btn:disabled { cursor: wait; opacity: .58; }
 .html-report-preview { display: block; width: 100%; min-height: 360px; max-height: 1400px; border: 0; background: #fff; }
+
+/* stage 模式（报告页主报告区）：占满父容器宽度并加高预览，不再受 860px 上限约束 */
+.html-report-card.stage { width: 100%; }
+.html-report-card.stage .html-report-preview { min-height: 620px; }
 
 /* ---- slim 轻量条（单行、与卡片同边框风格） ---- */
 .html-report-slim-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; color: var(--T2); }

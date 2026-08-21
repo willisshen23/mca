@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import TopBar from '../components/layout/TopBar.vue';
 import ChatMessageList from '../components/chat/ChatMessageList.vue';
@@ -8,10 +8,11 @@ import HtmlReportCard from '../components/chat/HtmlReportCard.vue';
 import { useAnalysisStore, REPORT_SESSION_KEY } from '../stores/analysisStore';
 import { useAgentChat } from '../composables/useAgentChat';
 import { useChatUrlParams } from '../composables/useChatUrlParams';
-import { createConversationAPI } from '@/api/conversations.js';
+import { createConversationAPI, fetchConversationMessages } from '@/api/conversations.js';
+import { reportDownloadUrl } from '@/api/agentRunHistory.js';
 import {
   downloadHtmlReport, installHtmlReportBridges, cancelPendingPngExports,
-  reportExportOverlay
+  reportExportOverlay, stripReportFooterNote
 } from '@/utils/htmlReport.js';
 
 const router = useRouter();
@@ -71,6 +72,111 @@ const headerInfo = computed(() => {
 });
 
 const reportTitle = computed(() => latestReport.value?.title || '活动分析报告');
+
+// ---- 报告版本切换 ----
+// 直播时修改报告会原地覆盖旧 HTML，但后端按 version_no 保存了全部版本快照，
+// 这里按 reportContext.history 列出版本，旧版本 HTML 按需从运行历史接口拉取并缓存。
+// 当前选中版本号（默认最新）
+const selectedVersion = ref(null);
+// 版本 → 合成报告消息（含拉取的 HTML），缓存避免重复请求，反馈状态也挂在上面
+const versionMessages = ref({});
+const versionLoading = ref(false);
+const versionError = ref('');
+// 当前报告在运行历史表中的 id（拉旧版本 HTML 用），按需查询一次
+const reportRunId = ref('');
+
+// 版本列表：reportContext.history 每项 { version, action, diff_summary }，最新版本在末位
+const versionOptions = computed(() => {
+  const history = latestReport.value?.reportContext?.history || [];
+  return history
+    .filter((item) => Number.isInteger(item?.version))
+    .map((item) => ({
+      version: item.version,
+      action: item.action === 'modify' ? '修改' : '生成',
+      summary: item.diff_summary || ''
+    }));
+});
+
+const latestVersion = computed(() => {
+  const ctx = latestReport.value?.reportContext;
+  return ctx?.version || latestReport.value?.versionNo || versionOptions.value.at(-1)?.version || 1;
+});
+
+// 当前展示的报告消息：最新版本直接用会话内消息，旧版本用拉取后缓存的合成消息
+const displayReport = computed(() => {
+  const report = latestReport.value;
+  if (!report) return null;
+  const selected = selectedVersion.value;
+  if (!selected || selected === latestVersion.value) return report;
+  return versionMessages.value[selected] || null;
+});
+
+// 报告更新（产生新版本或换了一份报告）时回到最新版本，并清掉旧版本缓存
+watch(
+  () => [latestReport.value?.reportRequestId || latestReport.value?.requestId, latestVersion.value],
+  () => {
+    selectedVersion.value = latestVersion.value;
+    versionMessages.value = {};
+    versionError.value = '';
+    reportRunId.value = '';
+  }
+);
+
+async function ensureReportRunId() {
+  if (reportRunId.value) return reportRunId.value;
+  const report = latestReport.value;
+  const requestId = report?.reportRequestId || report?.requestId;
+  const threadId = conversation.value?.id;
+  if (!requestId || !threadId) throw new Error('缺少报告标识，无法加载历史版本');
+  const detail = await fetchConversationMessages(threadId);
+  const item = (detail.reportHistories || []).find((h) => h.request_id === requestId);
+  if (!item?.id) throw new Error('未找到该报告的运行记录，无法加载历史版本');
+  reportRunId.value = item.id;
+  return item.id;
+}
+
+async function loadReportVersion(version) {
+  const report = latestReport.value;
+  if (!report || version === latestVersion.value || versionMessages.value[version]) return;
+  versionLoading.value = true;
+  versionError.value = '';
+  try {
+    const runId = await ensureReportRunId();
+    const response = await fetch(reportDownloadUrl(runId, 'html', version));
+    if (!response.ok) throw new Error(`历史版本拉取失败（HTTP ${response.status}）`);
+    const html = stripReportFooterNote(await response.text());
+    const realRequestId = report.reportRequestId || report.requestId || '';
+    versionMessages.value = {
+      ...versionMessages.value,
+      [version]: {
+        role: 'html_report',
+        title: report.title || '活动分析报告',
+        html,
+        // 与恢复逻辑一致：历史版本卡片 requestId 加 -vN 后缀，真实 request_id 单独保留
+        requestId: `${realRequestId}-v${version}`,
+        reportRequestId: realRequestId,
+        versionNo: version,
+        reportContext: null,
+        feedback: '',
+        feedbackComment: '',
+        feedbackSaving: false,
+        feedbackError: '',
+        commentEditorOpen: false,
+        feedbackCommentDraft: ''
+      }
+    };
+  } catch (e) {
+    versionError.value = e?.message || '历史版本加载失败';
+  } finally {
+    versionLoading.value = false;
+  }
+}
+
+function onVersionChange(event) {
+  const version = Number(event.target.value);
+  selectedVersion.value = version;
+  loadReportVersion(version);
+}
 
 // 生成时间展示：YYYY-MM-DD HH:mm 本地时间，无值时不显示
 const createdAtText = computed(() => {
@@ -221,7 +327,7 @@ function scrollToRunningTrace() {
 }
 
 function exportReport() {
-  if (latestReport.value) downloadHtmlReport(latestReport.value);
+  if (displayReport.value) downloadHtmlReport(displayReport.value);
 }
 
 function retryBoot() {
@@ -271,9 +377,39 @@ function retryBoot() {
             <i class="ti ti-report" style="color: var(--primary)"></i>
             <span class="stitle">分析报告</span>
             <span v-if="generating" style="font-size: 12px; color: var(--t3)">正在生成…</span>
+            <label v-if="versionOptions.length > 1" class="report-version-picker">
+              <span>版本</span>
+              <select
+                :value="selectedVersion || latestVersion"
+                :disabled="versionLoading"
+                @change="onVersionChange"
+              >
+                <option
+                  v-for="option in [...versionOptions].reverse()"
+                  :key="option.version"
+                  :value="option.version"
+                >
+                  v{{ option.version }}（{{ option.action }}）{{ option.version === latestVersion ? '· 最新' : '' }}
+                </option>
+              </select>
+            </label>
           </div>
-          <HtmlReportCard v-if="latestReport" :message="latestReport" :chat="chat" mode="stage" />
-          <div v-else class="report-placeholder">
+          <div v-if="versionError" class="report-version-error">
+            {{ versionError }}
+            <button type="button" @click="loadReportVersion(selectedVersion)">重试</button>
+          </div>
+          <div v-if="versionLoading" class="report-placeholder">
+            <i class="ti ti-loader-2 spinning" style="font-size: 24px; color: var(--primary)"></i>
+            <p>正在加载 v{{ selectedVersion }} 版本报告…</p>
+          </div>
+          <HtmlReportCard
+            v-else-if="displayReport"
+            :key="`${displayReport.requestId}-${displayReport.versionNo || 'latest'}`"
+            :message="displayReport"
+            :chat="chat"
+            mode="stage"
+          />
+          <div v-else-if="!latestReport" class="report-placeholder">
             <i class="ti ti-loader-2 spinning" style="font-size: 24px; color: var(--primary)"></i>
             <p>{{ (bootError || initialSendFailed) ? `生成失败${bootError ? `：${bootError}` : ''}，可点击下方重试` : '正在根据您选择的活动与分析框架生成报告，请稍候…' }}</p>
             <button v-if="bootError || initialSendFailed" class="btn" type="button" @click="retryBoot">
@@ -312,7 +448,7 @@ function retryBoot() {
         <button class="btn" type="button" @click="router.push({ name: 'compose' })">
           <i class="ti ti-arrow-left"></i> 返回调整
         </button>
-        <button class="btn pri" type="button" :disabled="!latestReport" @click="exportReport">
+        <button class="btn pri" type="button" :disabled="!displayReport" @click="exportReport">
           <i class="ti ti-download"></i> 导出HTML
         </button>
       </div>
@@ -333,9 +469,17 @@ function retryBoot() {
 /* 聊天组件（ChatMessageList/ChatComposer）的设计变量定义在 UiChatView 的 .ui-chat-page 上，
    这里按同值补齐，否则 var(--BD)/var(--P) 等未定义会导致气泡边框、背景整条失效 */
 .report-chat { --P: #165DFF; --PL: #E8F0FF; --PH: #0E47CC; --BD: #E5E6EB; --BG: #F7F8FA; --T1: #1D2129; --T2: #4E5969; --T3: #86909C; --RAI: 16px 16px 4px 16px; --RUSER: 16px 4px 16px 16px; }
-/* 消息区用浅灰底（同 /chat-ui 页面底色），白色气泡与 slim 报告卡片才有可见边界 */
-.report-chat-body { max-height: 420px; overflow-y: auto; padding: 12px; background: var(--BG); border-radius: 8px; }
+/* 消息区用浅灰底（同 /chat-ui 页面底色），白色气泡与 slim 报告卡片才有可见边界；
+   消息纵向间距同 /chat-ui 的 .chat-body（flex + gap 18px），否则各条输出会挤在一起 */
+.report-chat-body { max-height: 420px; overflow-y: auto; padding: 12px; background: var(--BG); border-radius: 8px; display: flex; flex-direction: column; gap: 18px; }
 .report-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 0; color: var(--t3); font-size: 13px; }
+/* 版本切换：报告区标题行右侧的下拉选择 */
+.report-version-picker { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t3); }
+.report-version-picker select { height: 28px; padding: 0 8px; border: .5px solid var(--border); border-radius: 8px; background: #fff; color: var(--t1); font-size: 12px; cursor: pointer; outline: none; }
+.report-version-picker select:focus { border-color: var(--primary); }
+.report-version-picker select:disabled { cursor: wait; opacity: .6; }
+.report-version-error { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 12px; border: .5px solid #fecdd3; border-radius: 8px; background: #fff1f2; color: #b42318; font-size: 12px; }
+.report-version-error button { border: .5px solid #fecdd3; border-radius: 6px; background: #fff; color: #b42318; font-size: 12px; padding: 2px 10px; cursor: pointer; }
 .spinning { animation: report-spin 1s linear infinite; }
 @keyframes report-spin { to { transform: rotate(360deg); } }
 /* 导出遮罩（UiChatView 中为组件 scoped 样式，这里按报告页变量补齐） */

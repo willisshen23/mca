@@ -1,3 +1,5 @@
+import { safeSetItem } from '@/utils/safeStorage.js';
+
 export function useChatUrlParams() {
   const params = new URLSearchParams(window.location.search);
   const userId = (params.get('userId') || '').trim();
@@ -6,22 +8,16 @@ export function useChatUrlParams() {
   const srcSysNo = (params.get('srcSysNo') || '').trim();
 
   // localStorage 可能被会话缓存占满（QuotaExceededError），
-  // 持久化失败不应阻断页面挂载——挂参仍通过返回值生效。
-  try {
-    if (userId) {
-      localStorage.setItem('user_id', userId);
-    }
-    if (orgNo) {
-      localStorage.setItem('org_no', orgNo);
-    }
-    if (userName) {
-      localStorage.setItem('user_name', userName);
-    }
-    if (srcSysNo) {
-      localStorage.setItem('src_sys_no', srcSysNo);
-    }
-  } catch (e) {
-    console.warn('URL 参数写入 localStorage 失败（可能存储已满）', e);
+  // safeSetItem 会淘汰最旧会话缓存后重试；仍失败不阻断页面挂载——
+  // 挂参仍通过返回值生效。
+  const persisted = [
+    ['user_id', userId],
+    ['org_no', orgNo],
+    ['user_name', userName],
+    ['src_sys_no', srcSysNo]
+  ].every(([key, value]) => !value || safeSetItem(key, value));
+  if (!persisted) {
+    console.warn('URL 参数写入 localStorage 失败（存储已满且无缓存可清理）');
   }
   const effectiveUserName = userName || (localStorage.getItem('user_name') || '').trim();
   const effectiveOrgNo = orgNo || (localStorage.getItem('org_no') || '').trim();

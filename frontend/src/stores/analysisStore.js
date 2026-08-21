@@ -3,6 +3,9 @@ import { skillData } from '../data/mockData';
 
 export const REPORT_SESSION_KEY = 'report_page_session';
 
+// 单次分析最多同时选择的活动数，防止模型上下文超长
+export const MAX_SELECTED_ACTIVITIES = 5;
+
 const state = reactive({
   currentType: 'online',
   selectedActivityNames: new Set(),
@@ -51,15 +54,21 @@ export function useAnalysisStore() {
   function toggleActivity(activityName) {
     if (state.selectedActivityNames.has(activityName)) {
       state.selectedActivityNames.delete(activityName);
-    } else {
-      state.selectedActivityNames.add(activityName);
+      return true;
     }
+    if (state.selectedActivityNames.size >= MAX_SELECTED_ACTIVITIES) {
+      return false;
+    }
+    state.selectedActivityNames.add(activityName);
+    return true;
   }
 
   function setAllActivities(checked, activities = []) {
     state.selectedActivityNames.clear();
     if (checked) {
-      activities.forEach((activity) => state.selectedActivityNames.add(activity.name));
+      activities
+        .slice(0, MAX_SELECTED_ACTIVITIES)
+        .forEach((activity) => state.selectedActivityNames.add(activity.name));
     }
   }
 

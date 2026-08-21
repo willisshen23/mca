@@ -276,7 +276,8 @@ async function start(type) {
 }
 
 async function enterChat() {
-  router.push({ name: 'chat-ui' });
+  // 「发起智能分析」跳转独立版分析流程第一步（/main 数据源配置）
+  router.push({ name: 'main-source' });
 }
 
 onMounted(async () => {
@@ -620,7 +621,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* 页面整体字体放大（仅 /main 首页看板） */
+/* 页面整体字体放大（仅 /management 首页看板） */
 .home-top-label { font-size: 14px; }
 
 .hero-eyebrow { font-size: 13px; }

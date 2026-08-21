@@ -1,0 +1,318 @@
+- generic [ref=f4e3]:
+  - generic [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6]: 活动分析助手
+      - generic [ref=f4e7]: 
+      - generic [ref=f4e8]: 活动分析
+    - generic [ref=f4e9]: 当前分析类型：线上活动
+    - generic "分析步骤" [ref=f4e10]:
+      - generic [ref=f4e11]:
+        - generic [ref=f4e12]: "1"
+        - generic [ref=f4e14]: 数据源配置
+      - generic [ref=f4e16]:
+        - generic [ref=f4e17]: "2"
+        - generic [ref=f4e19]: 组件编排
+      - generic [ref=f4e21]:
+        - generic [ref=f4e22]: "3"
+        - generic [ref=f4e24]: 分析报告
+    - button " 查看历史对话" [ref=f4e25] [cursor=pointer]:
+      - generic [ref=f4e26]: 
+      - text: 查看历史对话
+  - generic [ref=f4e28]:
+    - generic [ref=f4e29]:
+      - generic [ref=f4e30]: 
+      - generic [ref=f4e31]: 存量线上活动选择
+      - generic [ref=f4e32]: 勾选至少 1 个活动后可进入下一步，最多选择 5 个
+    - generic [ref=f4e33]:
+      - generic [ref=f4e34]: 
+      - text: 从存量线上活动中选择分析对象，统计时间自动取所选活动时间合集。
+    - generic [ref=f4e35]:
+      - generic [ref=f4e36]:
+        - generic [ref=f4e37]: 活动名称搜索
+        - textbox "输入关键词..." [ref=f4e38]
+      - generic [ref=f4e39]:
+        - generic [ref=f4e40]: 起始日期
+        - textbox [ref=f4e41]
+      - generic [ref=f4e42]:
+        - generic [ref=f4e43]: 截止日期
+        - textbox [ref=f4e44]
+    - table [ref=f4e46]:
+      - rowgroup [ref=f4e47]:
+        - row [ref=f4e48]:
+          - columnheader [ref=f4e49]
+          - columnheader "活动名称" [ref=f4e50]
+          - columnheader "类型" [ref=f4e51]
+          - columnheader "起止时间" [ref=f4e52]
+          - columnheader "状态" [ref=f4e53]
+      - rowgroup [ref=f4e54]:
+        - row [ref=f4e55] [cursor=pointer]:
+          - cell [ref=f4e56]:
+            - checkbox [ref=f4e57]
+          - cell "个养缴存营销-滨江支行" [ref=f4e58]
+          - cell "策略中心" [ref=f4e59]
+          - cell "2026-05-09 ~ 2026-06-30" [ref=f4e61]
+          - cell "活动结束" [ref=f4e62]
+        - row [ref=f4e64] [cursor=pointer]:
+          - cell [ref=f4e65]:
+            - checkbox [ref=f4e66]
+          - cell "个养开户营销-滨江支行" [ref=f4e67]
+          - cell "策略中心" [ref=f4e68]
+          - cell "2026-05-08 ~ 2026-06-30" [ref=f4e70]
+          - cell "活动结束" [ref=f4e71]
+        - row [ref=f4e73] [cursor=pointer]:
+          - cell [ref=f4e74]:
+            - checkbox [ref=f4e75]
+          - cell "2.个养缴存营销-新城支行" [ref=f4e76]
+          - cell "策略中心" [ref=f4e77]
+          - cell "2026-05-28 ~ 2026-06-30" [ref=f4e79]
+          - cell "活动结束" [ref=f4e80]
+        - row [ref=f4e82] [cursor=pointer]:
+          - cell [ref=f4e83]:
+            - checkbox [ref=f4e84]
+          - cell "个养开户营销-新城支行" [ref=f4e85]
+          - cell "策略中心" [ref=f4e86]
+          - cell "2026-05-28 ~ 2026-06-30" [ref=f4e88]
+          - cell "活动结束" [ref=f4e89]
+        - row [ref=f4e91] [cursor=pointer]:
+          - cell [ref=f4e92]:
+            - checkbox [ref=f4e93]
+          - cell "个养缴存营销-常青支行" [ref=f4e94]
+          - cell "策略中心" [ref=f4e95]
+          - cell "2026-05-06 ~ 2026-06-05" [ref=f4e97]
+          - cell "活动结束" [ref=f4e98]
+        - row [ref=f4e100] [cursor=pointer]:
+          - cell [ref=f4e101]:
+            - checkbox [ref=f4e102]
+          - cell "1.个养开户营销-常青支行" [ref=f4e103]
+          - cell "策略中心" [ref=f4e104]
+          - cell "2026-05-06 ~ 2026-06-05" [ref=f4e106]
+          - cell "活动结束" [ref=f4e107]
+        - row [ref=f4e109] [cursor=pointer]:
+          - cell [ref=f4e110]:
+            - checkbox [ref=f4e111]
+          - cell "个养缴存营销-钱塘支行" [ref=f4e112]
+          - cell "策略中心" [ref=f4e113]
+          - cell "2026-05-11 ~ 2026-06-30" [ref=f4e115]
+          - cell "活动结束" [ref=f4e116]
+        - row [ref=f4e118] [cursor=pointer]:
+          - cell [ref=f4e119]:
+            - checkbox [ref=f4e120]
+          - cell "个养缴存营销-钱塘支行" [ref=f4e121]
+          - cell "策略中心" [ref=f4e122]
+          - cell "2026-05-11 ~ 2026-05-11" [ref=f4e124]
+          - cell "活动结束" [ref=f4e125]
+        - row [ref=f4e127] [cursor=pointer]:
+          - cell [ref=f4e128]:
+            - checkbox [ref=f4e129]
+          - cell "个养开户营销-钱塘支行" [ref=f4e130]
+          - cell "策略中心" [ref=f4e131]
+          - cell "2026-05-11 ~ 2026-06-30" [ref=f4e133]
+          - cell "活动结束" [ref=f4e134]
+        - row [ref=f4e136] [cursor=pointer]:
+          - cell [ref=f4e137]:
+            - checkbox [ref=f4e138]
+          - cell "个养缴存-城东支行" [ref=f4e139]
+          - cell "策略中心" [ref=f4e140]
+          - cell "2026-05-12 ~ 2026-06-30" [ref=f4e142]
+          - cell "活动结束" [ref=f4e143]
+        - row [ref=f4e145] [cursor=pointer]:
+          - cell [ref=f4e146]:
+            - checkbox [ref=f4e147]
+          - cell "26.1泰州无锡·新开户存款意向客群" [ref=f4e148]
+          - cell "策略中心" [ref=f4e149]
+          - cell "2026-01-17 ~ 2026-01-31" [ref=f4e151]
+          - cell "活动结束" [ref=f4e152]
+        - row [ref=f4e154] [cursor=pointer]:
+          - cell [ref=f4e155]:
+            - checkbox [ref=f4e156]
+          - cell "26.1泰州无锡·理财到期承接客群B" [ref=f4e157]
+          - cell "策略中心" [ref=f4e158]
+          - cell "2026-01-17 ~ 2026-01-31" [ref=f4e160]
+          - cell "活动结束" [ref=f4e161]
+        - row [ref=f4e163] [cursor=pointer]:
+          - cell [ref=f4e164]:
+            - checkbox [ref=f4e165]
+          - cell "26.1泰州无锡·代发工资客群资金留存提升C" [ref=f4e166]
+          - cell "策略中心" [ref=f4e167]
+          - cell "2026-01-17 ~ 2026-01-31" [ref=f4e169]
+          - cell "活动结束" [ref=f4e170]
+        - row [ref=f4e172] [cursor=pointer]:
+          - cell [ref=f4e173]:
+            - checkbox [ref=f4e174]
+          - cell "25年二季度非价值客群新拓专项" [ref=f4e175]
+          - cell "策略中心" [ref=f4e176]
+          - cell "2025-06-13 ~ 2025-06-26" [ref=f4e178]
+          - cell "活动结束" [ref=f4e179]
+        - row [ref=f4e181] [cursor=pointer]:
+          - cell [ref=f4e182]:
+            - checkbox [ref=f4e183]
+          - cell "25年增金礼活动·仅二非价值新客" [ref=f4e184]
+          - cell "策略中心" [ref=f4e185]
+          - cell "2025-06-20 ~ 2025-06-21" [ref=f4e187]
+          - cell "活动结束" [ref=f4e188]
+        - row [ref=f4e190] [cursor=pointer]:
+          - cell [ref=f4e191]:
+            - checkbox [ref=f4e192]
+          - cell "25年Q1非价值拓新专班（更新版）" [ref=f4e193]
+          - cell "策略中心" [ref=f4e194]
+          - cell "2025-05-28 ~ 2025-06-10" [ref=f4e196]
+          - cell "活动结束" [ref=f4e197]
+        - row [ref=f4e199] [cursor=pointer]:
+          - cell [ref=f4e200]:
+            - checkbox [ref=f4e201]
+          - cell "25年T1流失召回输送·专班" [ref=f4e202]
+          - cell "策略中心" [ref=f4e203]
+          - cell "2025-05-13 ~ 2025-06-25" [ref=f4e205]
+          - cell "活动结束" [ref=f4e206]
+        - row [ref=f4e208] [cursor=pointer]:
+          - cell [ref=f4e209]:
+            - checkbox [ref=f4e210]
+          - cell "25年存量流失I类户首期（0512）" [ref=f4e211]
+          - cell "策略中心" [ref=f4e212]
+          - cell "2025-05-21 ~ 2025-05-31" [ref=f4e214]
+          - cell "活动结束" [ref=f4e215]
+        - row [ref=f4e217] [cursor=pointer]:
+          - cell [ref=f4e218]:
+            - checkbox [ref=f4e219]
+          - cell "LUM固化客群名单包" [ref=f4e220]
+          - cell "策略中心" [ref=f4e221]
+          - cell "2025-04-08 ~ 2025-04-09" [ref=f4e223]
+          - cell "活动结束" [ref=f4e224]
+        - row [ref=f4e226] [cursor=pointer]:
+          - cell [ref=f4e227]:
+            - checkbox [ref=f4e228]
+          - cell "25年存量流失I类户二期（0512）" [ref=f4e229]
+          - cell "策略中心" [ref=f4e230]
+          - cell "2025-05-29 ~ 2025-05-31" [ref=f4e232]
+          - cell "活动结束" [ref=f4e233]
+        - row [ref=f4e235] [cursor=pointer]:
+          - cell [ref=f4e236]:
+            - checkbox [ref=f4e237]
+          - cell "LUM固化名单包（补发版）" [ref=f4e238]
+          - cell "策略中心" [ref=f4e239]
+          - cell "2025-04-16 ~ 2025-04-18" [ref=f4e241]
+          - cell "活动结束" [ref=f4e242]
+        - row [ref=f4e244] [cursor=pointer]:
+          - cell [ref=f4e245]:
+            - checkbox [ref=f4e246]
+          - cell "仅二专享·财气增金礼首期" [ref=f4e247]
+          - cell "策略中心" [ref=f4e248]
+          - cell "2025-01-09 ~ 2025-01-13" [ref=f4e250]
+          - cell "活动结束" [ref=f4e251]
+        - row [ref=f4e253] [cursor=pointer]:
+          - cell [ref=f4e254]:
+            - checkbox [ref=f4e255]
+          - cell "25年5月优质仅二客群财气礼" [ref=f4e256]
+          - cell "策略中心" [ref=f4e257]
+          - cell "2025-05-16 ~ 2025-05-18" [ref=f4e259]
+          - cell "活动结束" [ref=f4e260]
+        - row [ref=f4e262] [cursor=pointer]:
+          - cell [ref=f4e263]:
+            - checkbox [ref=f4e264]
+          - cell "三月特邀·招财气双次触达活动" [ref=f4e265]
+          - cell "策略中心" [ref=f4e266]
+          - cell "2025-03-20 ~ 2025-03-23" [ref=f4e268]
+          - cell "活动结束" [ref=f4e269]
+        - row [ref=f4e271] [cursor=pointer]:
+          - cell [ref=f4e272]:
+            - checkbox [ref=f4e273]
+          - cell "三月招财气赢礼·特邀专场" [ref=f4e274]
+          - cell "策略中心" [ref=f4e275]
+          - cell "2025-03-10 ~ 2025-03-12" [ref=f4e277]
+          - cell "活动结束" [ref=f4e278]
+        - row [ref=f4e280] [cursor=pointer]:
+          - cell [ref=f4e281]:
+            - checkbox [ref=f4e282]
+          - cell "支付促活·AUM理财客群包2" [ref=f4e283]
+          - cell "策略中心" [ref=f4e284]
+          - cell "2025-04-02 ~ 2025-04-03" [ref=f4e286]
+          - cell "活动结束" [ref=f4e287]
+        - row [ref=f4e289] [cursor=pointer]:
+          - cell [ref=f4e290]:
+            - checkbox [ref=f4e291]
+          - cell "支付固化名单2·支付促活场" [ref=f4e292]
+          - cell "策略中心" [ref=f4e293]
+          - cell "2025-04-24 ~ 2025-04-26" [ref=f4e295]
+          - cell "活动结束" [ref=f4e296]
+        - row [ref=f4e298] [cursor=pointer]:
+          - cell [ref=f4e299]:
+            - checkbox [ref=f4e300]
+          - cell "支付固化名单3·支付促活场" [ref=f4e301]
+          - cell "策略中心" [ref=f4e302]
+          - cell "2025-05-07 ~ 2025-05-09" [ref=f4e304]
+          - cell "活动结束" [ref=f4e305]
+        - row [ref=f4e307] [cursor=pointer]:
+          - cell [ref=f4e308]:
+            - checkbox [ref=f4e309]
+          - cell "25年Q1财气礼·32万客群包" [ref=f4e310]
+          - cell "策略中心" [ref=f4e311]
+          - cell "2025-01-16 ~ 2025-01-19" [ref=f4e313]
+          - cell "活动结束" [ref=f4e314]
+        - row [ref=f4e316] [cursor=pointer]:
+          - cell [ref=f4e317]:
+            - checkbox [ref=f4e318]
+          - cell "支付促活·AUM存款客群包1" [ref=f4e319]
+          - cell "策略中心" [ref=f4e320]
+          - cell "2025-04-02 ~ 2025-04-03" [ref=f4e322]
+          - cell "活动结束" [ref=f4e323]
+        - row [ref=f4e325] [cursor=pointer]:
+          - cell [ref=f4e326]:
+            - checkbox [ref=f4e327]
+          - cell "25年6月理财到期客户承接专项" [ref=f4e328]
+          - cell "策略中心" [ref=f4e329]
+          - cell "2025-06-05 ~ 2025-06-30" [ref=f4e331]
+          - cell "活动结束" [ref=f4e332]
+        - row [ref=f4e334] [cursor=pointer]:
+          - cell [ref=f4e335]:
+            - checkbox [ref=f4e336]
+          - cell "25年Q2理财到期客户续投专项活动" [ref=f4e337]
+          - cell "策略中心" [ref=f4e338]
+          - cell "2025-04-10 ~ 2025-05-10" [ref=f4e340]
+          - cell "活动结束" [ref=f4e341]
+        - row [ref=f4e343] [cursor=pointer]:
+          - cell [ref=f4e344]:
+            - checkbox [ref=f4e345]
+          - cell "25年理财到期资金承接·高净值客户专班" [ref=f4e346]
+          - cell "策略中心" [ref=f4e347]
+          - cell "2025-05-20 ~ 2025-06-20" [ref=f4e349]
+          - cell "活动结束" [ref=f4e350]
+        - row [ref=f4e352] [cursor=pointer]:
+          - cell [ref=f4e353]:
+            - checkbox [ref=f4e354]
+          - cell "快捷支付绑卡促活活动" [ref=f4e355]
+          - cell "促活跃提升类型活动" [ref=f4e356]
+          - cell "2025-04-18 ~ 2025-05-18" [ref=f4e358]
+          - cell "活动结束" [ref=f4e359]
+        - row [ref=f4e361] [cursor=pointer]:
+          - cell [ref=f4e362]:
+            - checkbox [ref=f4e363]
+          - cell "2026春季资产提升专项活动" [ref=f4e364]
+          - cell "促资产提升类型活动" [ref=f4e365]
+          - cell "2026-02-01 ~ 2026-04-30" [ref=f4e367]
+          - cell "活动结束" [ref=f4e368]
+        - row [ref=f4e370] [cursor=pointer]:
+          - cell [ref=f4e371]:
+            - checkbox [ref=f4e372]
+          - cell "2026夏季资产提升_金卡客户权益活动" [ref=f4e373]
+          - cell "促资产提升类型活动" [ref=f4e374]
+          - cell "2026-05-15 ~ 2026-08-15" [ref=f4e376]
+          - cell "活动结束" [ref=f4e377]
+        - row [ref=f4e379] [cursor=pointer]:
+          - cell [ref=f4e380]:
+            - checkbox [ref=f4e381]
+          - cell "2026理财到期客户专属承接活动" [ref=f4e382]
+          - cell "面向理财到期客户类型活动" [ref=f4e383]
+          - cell "2026-04-01 ~ 2026-06-30" [ref=f4e385]
+          - cell "活动结束" [ref=f4e386]
+        - row [ref=f4e388] [cursor=pointer]:
+          - cell [ref=f4e389]:
+            - checkbox [ref=f4e390]
+          - cell "2026三季度理财到期客户回馈活动" [ref=f4e391]
+          - cell "面向理财到期客户类型活动" [ref=f4e392]
+          - cell "2026-07-01 ~ 2026-09-30" [ref=f4e394]
+          - cell "活动结束" [ref=f4e395]
+  - generic [ref=f4e397]:
+    - button "上一步"
+    - button "下一步 ":
+      - text: 下一步
+      - generic: 

@@ -1,10 +1,9 @@
 <script setup>
 import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useAnalysisStore } from '../../stores/analysisStore';
 
 const route = useRoute();
-const router = useRouter();
 const store = useAnalysisStore();
 
 const activeKey = computed(() => {
@@ -19,30 +18,17 @@ const activeKey = computed(() => {
   if (route.name === 'settings') return 'settings';
   return '';
 });
-
-function startAnalysis(type) {
-  store.setAnalysisType(type, true);
-  router.push({ name: 'source', params: { type } });
-}
 </script>
 
 <template>
   <aside class="sb" aria-label="主导航">
-    <RouterLink class="logo" to="/main" aria-label="管理首页">
+    <RouterLink class="logo" to="/management" aria-label="管理首页">
       <i class="ti ti-chart-dots-3"></i>
     </RouterLink>
-    <RouterLink class="ni" :class="{ active: activeKey === 'main' }" to="/main">
+    <RouterLink class="ni" :class="{ active: activeKey === 'main' }" to="/management">
       <i class="ti ti-home"></i>
       <span>首页</span>
     </RouterLink>
-    <button class="ni" :class="{ active: activeKey === 'online' }" type="button" @click="startAnalysis('online')">
-      <i class="ti ti-device-desktop-analytics"></i>
-      <span>线上</span>
-    </button>
-    <button class="ni" :class="{ active: activeKey === 'offline' }" type="button" @click="startAnalysis('offline')">
-      <i class="ti ti-building-store"></i>
-      <span>线下</span>
-    </button>
     <RouterLink class="ni" :class="{ active: activeKey === 'skills' }" to="/skills">
       <i class="ti ti-brain"></i>
       <span>SKILL</span>

@@ -229,18 +229,6 @@ function handleMarkdownActivityTableClick(event, message) {
                 <div class="detail-value">
                   已计算 {{ componentValueFetchSummary(step).metric_count }} 项指标<template v-if="componentValueFetchSummary(step).error_count">，{{ componentValueFetchSummary(step).error_count }} 项取数失败</template>
                 </div>
-                <div v-if="componentValueFetchSummary(step).templates?.length || componentValueFetchSummary(step).metrics?.length" class="metric-chip-list">
-                  <span
-                    v-for="tpl in componentValueFetchSummary(step).templates || []"
-                    :key="tpl.template_name"
-                    class="capability-chip"
-                  >{{ tpl.template_name }} · {{ tpl.metric_count }} 项</span>
-                  <span
-                    v-for="metric in componentValueFetchSummary(step).metrics || []"
-                    :key="metric"
-                    class="capability-chip"
-                  >{{ metric }}</span>
-                </div>
               </div>
               <div v-if="componentValueCleanupText(step)" class="trace-step-detail">
                 <div class="detail-label">数据清理</div>
@@ -386,8 +374,6 @@ function handleMarkdownActivityTableClick(event, message) {
 .trace-step-detail { display: flex; flex-direction: column; margin-top: 6px; padding: 6px 10px; background: #fff; border-radius: 6px; border: .5px solid var(--BD); }
 .detail-label { order: 1; font-size: 10px; color: var(--T3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
 .detail-value { order: 2; font-size: 12px; color: var(--T1); font-weight: 500; }
-.metric-chip-list { order: 3; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.capability-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--BG); border: .5px solid var(--BD); color: var(--T2); font-size: 11px; font-weight: 500; line-height: 1; white-space: nowrap; }
 .activity-list-preview { order: 3; display: grid; gap: 8px; margin: 8px 0 0; }
 .activity-preview-item { padding: 8px 10px; border: .5px solid var(--BD); border-radius: 8px; background: var(--BG); }
 .activity-preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; min-width: 0; }
