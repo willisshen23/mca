@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TopBar from '../components/layout/TopBar.vue';
+import MainHero from '../components/layout/MainHero.vue';
 import SkillLibrary from '../components/skills/SkillLibrary.vue';
 import SkillCanvas from '../components/skills/SkillCanvas.vue';
 import { useAnalysisStore } from '../stores/analysisStore';
@@ -24,6 +25,8 @@ const activityListOpen = ref(false);
 const sourceRef = ref(null);
 const isOnline = computed(() => store.state.currentType === 'online');
 const selectedActivities = computed(() => [...store.state.selectedActivityNames]);
+// 画布为空（未选任何分析组件）时禁止生成报告
+const hasCanvasSkills = computed(() => store.state.canvasComps.length > 0);
 
 function handleDocumentClick(event) {
   if (sourceRef.value && !sourceRef.value.contains(event.target)) {
@@ -87,6 +90,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page">
+    <MainHero />
     <TopBar current-label="组件编排" :step="2">
       <button class="btn sm ghost history-btn" type="button" @click="goHistory">
         <i class="ti ti-history"></i> 查看历史对话
@@ -136,19 +140,6 @@ onBeforeUnmount(() => {
             </div>
             <div class="tpl-strip-list">
               <button
-                type="button"
-                class="tpl-chip"
-                :class="{ active: !store.state.activeTemplateName }"
-                @click="store.resetCanvas"
-              >
-                <span class="tpl-chip-icon default"><i class="ti ti-sparkles"></i></span>
-                <span class="tpl-chip-text">
-                  <span class="tpl-chip-name">AI 默认框架</span>
-                  <span class="tpl-chip-cnt">{{ store.state.defaultCanvasComps.length }} 个组件</span>
-                </span>
-                <i v-if="!store.state.activeTemplateName" class="ti ti-check tpl-chip-check"></i>
-              </button>
-              <button
                 v-for="tpl in templates"
                 :key="tpl.id"
                 type="button"
@@ -175,13 +166,16 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div class="fbar">
-      <button class="btn ghost" type="button" @click="store.resetCanvas">
-        <i class="ti ti-refresh"></i> 重置AI默认框架
-      </button>
       <button class="btn" type="button" @click="goBack">
         <i class="ti ti-arrow-left"></i> 上一步
       </button>
-      <button class="btn pri" type="button" @click="goReport">
+      <button
+        class="btn pri"
+        type="button"
+        :disabled="!hasCanvasSkills"
+        title="请先从左侧组件库添加分析组件"
+        @click="goReport"
+      >
         生成分析报告 <i class="ti ti-report"></i>
       </button>
     </div>
@@ -396,11 +390,6 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
-}
-
-.tpl-chip-icon.default {
-  background: #edf3ff;
-  color: var(--primary);
 }
 
 .tpl-chip-text {

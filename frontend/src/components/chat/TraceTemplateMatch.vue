@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue';
 import { useSkillLibrary } from '@/composables/useSkillLibrary.js';
 
 // 思维过程面板中的「分析模板匹配结果」卡片：
-// 主模板（名称/ID/匹配度/理由）+ Top-N 候选 + 有序 SKILL 编排（分类/描述/展示要求）。
+// 主模板（名称/ID/匹配度/理由）+ Top-N 候选 + 有序 SKILL 编排（分类/描述/分析 SKILL 详情）。
 const props = defineProps({
   label: { type: String, default: '分析模板匹配' },
   result: { type: Object, default: null },
@@ -127,7 +127,7 @@ const skillCards = computed(() => {
           <details v-if="card.skill_template_preview" class="skill-card-preview">
             <summary>
               <i class="ti ti-chevron-right tpl-candidates-chevron" aria-hidden="true"></i>
-              展示要求
+              分析 SKILL 详情
             </summary>
             <div class="skill-card-preview-body">{{ card.skill_template_preview }}</div>
           </details>

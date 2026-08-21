@@ -33,6 +33,8 @@ async def api_list_online_activities(
     activity_type: str = Query(default=""),
     start_date: str = Query(default=""),
     end_date: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
 ):
     started = time.perf_counter()
     params = {
@@ -40,6 +42,8 @@ async def api_list_online_activities(
         "actTypeCd": activity_type.strip(),
         "start_date": start_date.strip(),
         "end_date": end_date.strip(),
+        "pageNum": page,
+        "pageSize": page_size,
     }
     result = await run_in_threadpool(fetch_activity_list, params)
     if not result.success:
@@ -52,10 +56,19 @@ async def api_list_online_activities(
         # 上游可能返回无名称/编号的空记录，直接过滤
         if (item.get("name") or "").strip() or (item.get("act_no") or "").strip()
     ]
+    # 上游只返回当前页数组、无总数，用"返回条数 == page_size"判断是否还有下一页
+    has_more = len(activities) >= page_size
     logger.info(
-        "online_activities_api list keyword=%r count=%d cost_ms=%.2f",
+        "online_activities_api list keyword=%r page=%d page_size=%d count=%d cost_ms=%.2f",
         params["keyword"],
+        page,
+        page_size,
         len(activities),
         (time.perf_counter() - started) * 1000,
     )
-    return {"activities": activities}
+    return {
+        "activities": activities,
+        "page": page,
+        "page_size": page_size,
+        "has_more": has_more,
+    }

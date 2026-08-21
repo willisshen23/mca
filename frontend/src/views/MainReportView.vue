@@ -5,6 +5,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TopBar from '../components/layout/TopBar.vue';
+import MainHero from '../components/layout/MainHero.vue';
 import ChatMessageList from '../components/chat/ChatMessageList.vue';
 import ChatComposer from '../components/chat/ChatComposer.vue';
 import HtmlReportCard from '../components/chat/HtmlReportCard.vue';
@@ -355,6 +356,7 @@ function retryBoot() {
 
 <template>
   <div class="page">
+    <MainHero />
     <TopBar current-label="分析报告" :step="3">
       <button class="btn sm ghost history-btn" type="button" @click="goHistory">
         <i class="ti ti-history"></i> 查看历史对话

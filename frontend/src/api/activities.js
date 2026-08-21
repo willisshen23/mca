@@ -21,7 +21,14 @@ export async function fetchOnlineActivities(params = {}) {
   if (params.activityType) query.set('activity_type', params.activityType);
   if (params.startDate) query.set('start_date', params.startDate);
   if (params.endDate) query.set('end_date', params.endDate);
+  if (params.page) query.set('page', params.page);
+  if (params.pageSize) query.set('page_size', params.pageSize);
   const suffix = query.toString() ? `?${query}` : '';
   const data = await request(`/online-activities${suffix}`);
-  return data.activities || [];
+  return {
+    activities: data.activities || [],
+    page: data.page || 1,
+    pageSize: data.page_size || params.pageSize || 20,
+    hasMore: Boolean(data.has_more)
+  };
 }

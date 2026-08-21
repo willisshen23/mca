@@ -823,12 +823,12 @@ def _dimension_indicators(project_no: str, total_customers: int) -> list[dict[st
             "cfgTypeName": "AUM时点值",
             "srcTableName": "COAP_DATA.COAP_CUST_BIZ_VAL_ANALY",
         },
-        _dimension_rule("所属分行名称", "I200174", [("南京分行", "200"), ("上海分行", "206"), ("北京分行", "215")]),
+        _dimension_rule("所属分行名称", "I200174", [("杭州分行", "200"), ("上海分行", "206"), ("北京分行", "215")]),
         _dimension_rule("性别代码", "I200176", [("男", "02"), ("女", "03")]),
     ]
     rows = [
         {"I200174": "上海分行", "I200176": "男", "totalCount": max(int(total_customers * 0.19), 1)},
-        {"I200174": "南京分行", "I200176": "男", "totalCount": max(int(total_customers * 0.31), 1)},
+        {"I200174": "杭州分行", "I200176": "男", "totalCount": max(int(total_customers * 0.31), 1)},
         {"I200174": "北京分行", "I200176": "女", "totalCount": max(int(total_customers * 0.12), 1)},
     ]
     return [

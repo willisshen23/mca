@@ -4,6 +4,7 @@
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TopBar from '../components/layout/TopBar.vue';
+import MainHero from '../components/layout/MainHero.vue';
 import OnlineSourceConfig from '../components/source/OnlineSourceConfig.vue';
 import { useAnalysisStore, MAX_SELECTED_ACTIVITIES } from '../stores/analysisStore';
 
@@ -33,6 +34,7 @@ function goHistory() {
 
 <template>
   <div class="page">
+    <MainHero />
     <TopBar current-label="活动分析" :step="1" :badge="badge" :badge-mode="badgeMode">
       <button class="btn sm ghost history-btn" type="button" @click="goHistory">
         <i class="ti ti-history"></i> 查看历史对话
