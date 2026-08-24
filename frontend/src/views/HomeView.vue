@@ -7,11 +7,9 @@ import {
   fetchUsageSummary,
   recordUsageEvent
 } from '../api/usageDashboard';
-import { useAnalysisStore } from '../stores/analysisStore';
 
 const route = useRoute();
 const router = useRouter();
-const store = useAnalysisStore();
 const days = ref(30);
 const loading = ref(true);
 const error = ref('');
@@ -268,11 +266,6 @@ async function exportDetails() {
   } finally {
     exporting.value = false;
   }
-}
-
-async function start(type) {
-  store.setAnalysisType(type, true);
-  router.push({ name: 'source', params: { type } });
 }
 
 async function enterChat() {
@@ -581,41 +574,6 @@ onMounted(async () => {
           </div>
         </article>
       </section>
-
-      <section class="entry-section">
-        <div class="section-heading">
-          <div>
-            <h3>快速开始</h3>
-            <p>选择适合的分析方式，快速进入工作流</p>
-          </div>
-        </div>
-        <div class="hmcards">
-          <button class="hmc" type="button" @click="start('online')">
-            <div class="hmc-ic online"><i class="ti ti-device-desktop-analytics"></i></div>
-            <div>
-              <h4>线上活动分析</h4>
-              <p>APP 推广、直播营销、线上理财等数字渠道活动分析</p>
-            </div>
-            <i class="ti ti-arrow-right entry-arrow"></i>
-          </button>
-          <button class="hmc" type="button" @click="start('offline')">
-            <div class="hmc-ic offline"><i class="ti ti-building-store"></i></div>
-            <div>
-              <h4>线下活动分析</h4>
-              <p>网点营销、户外推广、客户拜访等线下活动效果分析</p>
-            </div>
-            <i class="ti ti-arrow-right entry-arrow"></i>
-          </button>
-          <button class="hmc" type="button" @click="router.push({ name: 'templates' })">
-            <div class="hmc-ic template"><i class="ti ti-layout-cards"></i></div>
-            <div>
-              <h4>活动分析模板</h4>
-              <p>使用预置专项分析模板，更快完成标准化报告</p>
-            </div>
-            <i class="ti ti-arrow-right entry-arrow"></i>
-          </button>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -629,8 +587,8 @@ onMounted(async () => {
 .usage-hero p { font-size: 15px; }
 .hero-action { font-size: 14px; }
 
-.usage-toolbar h3, .card-heading h3, .section-heading h3 { font-size: 17px; }
-.usage-toolbar p, .card-heading p, .section-heading p { font-size: 13px; }
+.usage-toolbar h3, .card-heading h3 { font-size: 17px; }
+.usage-toolbar p, .card-heading p { font-size: 13px; }
 .usage-export-button { font-size: 13px; }
 .period-tabs button { font-size: 13px; }
 .usage-error { font-size: 14px; }
@@ -665,7 +623,4 @@ onMounted(async () => {
 .organization-meta strong { font-size: 13px; }
 .organization-meta span { font-size: 11px; }
 .empty-organization { font-size: 13px; }
-
-.usage-home .hmc h4 { font-size: 15px; }
-.usage-home .hmc p { font-size: 12px; }
 </style>

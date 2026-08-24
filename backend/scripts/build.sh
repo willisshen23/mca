@@ -29,9 +29,11 @@ fi
 echo "前端构建完成"
 
 # 2. 复制前端产物到后端 static 目录
+# 应用只挂载 backend/src/infrastructure/static（src/main.py StaticFiles），
+# src/static 为历史遗留目录、无人服务，不要往那里拷
 echo ""
 echo ">>> [2/4] 复制前端静态文件..."
-STATIC_DIR="$ROOT/backend/src/static"
+STATIC_DIR="$ROOT/backend/src/infrastructure/static"
 rm -rf "$STATIC_DIR"
 cp -r "$ROOT/frontend/dist" "$STATIC_DIR"
 echo "前端文件已复制到: $STATIC_DIR"

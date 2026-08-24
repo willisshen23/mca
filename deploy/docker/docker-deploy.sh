@@ -94,6 +94,15 @@ if [ "$MOCK_CONFIG_UPDATED" = true ]; then
 fi
 
 # ── LLM API Key 密文（enc:v1:）主密钥预检 ──
+# 环境变量未提供时，自动加载约定密钥文件（deploy/docker/secrets/master.key，
+# 已被 git/docker 构建上下文排除；服务器上放置后 chmod 600 即可）。
+MASTER_KEY_FILE="$DEPLOY_DIR/secrets/master.key"
+if [ -z "${LLM_MASTER_KEY:-}" ] && [ -f "$MASTER_KEY_FILE" ]; then
+    LLM_MASTER_KEY="$(tr -d '[:space:]' < "$MASTER_KEY_FILE")"
+    export LLM_MASTER_KEY
+    echo "已从 $MASTER_KEY_FILE 加载 LLM_MASTER_KEY"
+fi
+
 if grep -q "enc:v1:" "$ENV_FILE" 2>/dev/null; then
     if grep -q "^LLM_MASTER_KEY=" "$ENV_FILE"; then
         echo "警告: backend/.env 中检测到 LLM_MASTER_KEY——主密钥与密文同文件存放，失去加密意义，建议移除并改用宿主机环境变量注入。" >&2

@@ -98,7 +98,8 @@ function handleMarkdownActivityTableClick(event, message) {
             <i class="ti ti-download" aria-hidden="true"></i>
             下载 {{ (message.exportArtifact.format || 'HTML').toUpperCase() }} 报告
           </button>
-          <div v-if="selectionActivities(message).length" class="inline-table-bulk-actions">
+          <!-- 可选活动少于 2 个时，全选/全不选与已选计数均无意义，整条工具条不渲染 -->
+          <div v-if="selectionActivities(message).length > 1" class="inline-table-bulk-actions">
             <span>已选 {{ (message.selectedIds || []).length }} 行</span>
             <button
               type="button"

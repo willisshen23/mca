@@ -18,6 +18,20 @@ mkdir -p \
   "$DATA_DIR/outputs/exports" \
   "$DATA_DIR/logs"
 
+# 数据库种子：镜像内置的初始数据（构建时由 build-offline-images.sh 打入）。
+# 仅当数据卷中不存在同名文件时才拷贝，绝不覆盖已有运行数据。
+SEED_DIR="${SEED_DIR:-/app/backend/seed-data}"
+if [ -d "$SEED_DIR" ]; then
+  for seed in "$SEED_DIR"/*.db; do
+    [ -f "$seed" ] || continue
+    base="$(basename "$seed")"
+    if [ ! -f "$DATA_DIR/$base" ]; then
+      echo "种子数据: 初始化 $base -> $DATA_DIR/$base"
+      cp "$seed" "$DATA_DIR/$base"
+    fi
+  done
+fi
+
 echo "============================================"
 echo "  活动分析助手 - Docker SQLite 部署"
 echo "============================================"

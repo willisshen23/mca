@@ -20,10 +20,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 FROM python-base AS mock-runtime
 
+# 构建机访问默认 PyPI 不稳定时，通过 --build-arg PIP_INDEX_URL=<镜像> 切换。
+ARG PIP_INDEX_URL=""
+
 WORKDIR /app/mock
 
 COPY mock/requirements.txt /tmp/mock-requirements.txt
-RUN python -m pip install --no-cache-dir -r /tmp/mock-requirements.txt
+RUN if [ -n "$PIP_INDEX_URL" ]; then \
+      python -m pip install --no-cache-dir --timeout 60 --retries 10 \
+        -i "$PIP_INDEX_URL" -r /tmp/mock-requirements.txt; \
+    else \
+      python -m pip install --no-cache-dir --timeout 60 --retries 10 \
+        -r /tmp/mock-requirements.txt; \
+    fi
 
 COPY mock/ /app/mock/
 
@@ -34,14 +43,27 @@ CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005"
 
 FROM python-base AS runtime
 
+# 构建机访问默认 PyPI 不稳定时，通过 --build-arg PIP_INDEX_URL=<镜像> 切换。
+ARG PIP_INDEX_URL=""
+
 WORKDIR /app/backend
 
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN python -m pip install --no-cache-dir -r /tmp/requirements.txt
+RUN if [ -n "$PIP_INDEX_URL" ]; then \
+      python -m pip install --no-cache-dir --timeout 60 --retries 10 \
+        -i "$PIP_INDEX_URL" -r /tmp/requirements.txt; \
+    else \
+      python -m pip install --no-cache-dir --timeout 60 --retries 10 \
+        -r /tmp/requirements.txt; \
+    fi
 
 COPY backend/ /app/backend/
 COPY --from=frontend-builder /build/frontend/dist/ /app/backend/src/infrastructure/static/
 COPY deploy/docker/docker-entrypoint.sh /usr/local/bin/njbank-entrypoint
+
+# 数据库种子文件（可选）：由 build-offline-images.sh 在构建前生成。
+# 目标机首次启动时由入口脚本拷入数据卷（只补缺失，不覆盖已有数据）。
+COPY deploy/docker/seed-data/ /app/backend/seed-data/
 
 # 防止在 Windows 工作区构建时 CRLF 导致脚本无法执行。
 RUN sed -i 's/\r$//' /usr/local/bin/njbank-entrypoint \

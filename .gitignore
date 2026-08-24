@@ -159,3 +159,8 @@ java-backend/target/
 # P4 离线包（大文件不入库）
 offline-v3/wheels/*.whl
 offline-v3/dist/
+
+# 离线镜像打包产物与数据库种子快照（大文件/含数据，不入库）
+offline-dist/
+deploy/docker/seed-data/*
+!deploy/docker/seed-data/.gitkeep
