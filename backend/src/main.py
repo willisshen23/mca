@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import time
@@ -18,6 +19,9 @@ from src.api.routes import router
 from src.config import get_settings
 
 settings = get_settings()
+
+# 后台任务强引用（防 GC 提前回收），目前用于 lifespan 预热任务。
+_background_tasks: set[asyncio.Task] = set()
 
 
 class SpaStaticFiles(StaticFiles):
@@ -205,6 +209,29 @@ async def lifespan(app: FastAPI):
     await init_v3_checkpointer()
     await Runner.start()
     _log.info("agent_v3: openjiuwen Runner started")
+
+    # 后台预热（不阻塞启动，失败不影响服务，运行期各自有兜底）：
+    # 1) tiktoken 词表首次加载需联网，离线环境会同步阻塞到 TCP 超时（约 1 分钟），
+    #    放工作线程提前触发，避免首个用户任务冻结事件循环；
+    # 2) ReActAgent 首次组装有一次性成本，提前完成（内部有锁，与首个请求并发安全）。
+    async def _warm_runtime() -> None:
+        from src.utils.token_budget import warm_token_estimator
+
+        try:
+            await asyncio.to_thread(warm_token_estimator)
+        except Exception:
+            _log.exception("tiktoken 词表预热失败（运行期退化为字符估算）")
+        try:
+            from src.agent_v3.agent_factory import get_v3_agent
+
+            await get_v3_agent()
+            _log.info("agent_v3: 智能体预热完成")
+        except Exception:
+            _log.exception("agent_v3: 智能体预热失败（首个任务将按需重建）")
+
+    warmup_task = asyncio.create_task(_warm_runtime())
+    _background_tasks.add(warmup_task)
+    warmup_task.add_done_callback(_background_tasks.discard)
 
     yield
 

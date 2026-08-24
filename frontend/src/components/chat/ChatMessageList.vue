@@ -14,7 +14,7 @@ import {
 import {
   activityName, activityId, activityRowNumber, activityPeriod, activityTags,
   activitySummary, visibleActivities, selectionActivities,
-  allActivitySelectionChecked, selectedActivityRowNumbers
+  allActivitySelectionChecked, selectedActivityRowNumbers, selectableActivityRowCount
 } from '@/utils/activityFormat.js';
 
 const props = defineProps({
@@ -40,7 +40,7 @@ function renderMessageMarkdown(message) {
 }
 
 function handleMarkdownActivityTableClick(event, message) {
-  if (!selectionActivities(message).length) return;
+  if (!selectableActivityRowCount(message)) return;
   const row = event.target?.closest?.('tbody tr[data-row-number]');
   if (!row || !event.currentTarget?.contains(row)) return;
   const rowNumber = Number(row.dataset.rowNumber);
@@ -85,7 +85,7 @@ function handleMarkdownActivityTableClick(event, message) {
         <template v-else>
           <div
             class="md-body"
-            :class="{ 'has-selectable-table': selectionActivities(message).length }"
+            :class="{ 'has-selectable-table': selectableActivityRowCount(message) > 0 }"
             @click="handleMarkdownActivityTableClick($event, message)"
             v-html="renderMessageMarkdown(message)"
           ></div>
@@ -98,8 +98,9 @@ function handleMarkdownActivityTableClick(event, message) {
             <i class="ti ti-download" aria-hidden="true"></i>
             下载 {{ (message.exportArtifact.format || 'HTML').toUpperCase() }} 报告
           </button>
-          <!-- 可选活动少于 2 个时，全选/全不选与已选计数均无意义，整条工具条不渲染 -->
-          <div v-if="selectionActivities(message).length > 1" class="inline-table-bulk-actions">
+          <!-- 正文没有可选择的活动表格（如决策类纯文字提问），或可选行不足 2 行时，
+               全选/全不选与已选计数均无意义，整条工具条不渲染 -->
+          <div v-if="selectableActivityRowCount(message) > 1" class="inline-table-bulk-actions">
             <span>已选 {{ (message.selectedIds || []).length }} 行</span>
             <button
               type="button"

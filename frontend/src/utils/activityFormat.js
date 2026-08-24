@@ -121,6 +121,37 @@ export function selectionActivities(message) {
     : (Array.isArray(message?.activities) ? message.activities : []);
 }
 
+// 统计回复正文里「可选择的活动表格」的数据行数，判定条件与 markdown.js 渲染器一致：
+// 首列表头为「序号」（行才可点选），且表头含活动标识列（活动名称/活动编号/活动ID）。
+// 决策类提问是纯文字、没有表格，即使业务状态里带着 activity_list，
+// 用户也无从点选，此时不应出现「已选 N 行 / 全选 / 全不选」等任何选择 UI。
+export function selectableActivityRowCount(message) {
+  const text = String(message?.text || '');
+  if (!text.includes('|')) return 0;
+  const lines = text.split('\n');
+  let count = 0;
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    const trimmed = lines[i].trim();
+    if (!trimmed.includes('|')) continue;
+    // 分隔行判定与 markdown.js isTableSeparator 保持一致
+    const separator = lines[i + 1];
+    if (!(/^\|?[\s:|-]+\|[\s:|-]*$/.test(separator.trim()) && separator.includes('-'))) continue;
+    const headers = trimmed.replace(/^\|/, '').replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.replace(/<[^>]+>|[*_`]/g, '').trim());
+    if (headers[0] !== '序号') continue;
+    if (!headers.some((header) => ['活动名称', '活动编号', '活动ID'].includes(header))) continue;
+    let j = i + 2;
+    while (j < lines.length && lines[j].trim().includes('|') && lines[j].trim()) {
+      const firstCell = lines[j].trim().replace(/^\|/, '').split('|')[0];
+      if (Number.isInteger(Number.parseInt(firstCell, 10))) count += 1;
+      j += 1;
+    }
+    i = j - 1;
+  }
+  return count;
+}
+
 export function allActivitySelectionChecked(message) {
   const ids = selectionActivities(message).map((activity) => activityId(activity)).filter(Boolean);
   const selected = new Set(message?.selectedIds || []);

@@ -57,6 +57,12 @@ RUN if [ -n "$PIP_INDEX_URL" ]; then \
         -r /tmp/requirements.txt; \
     fi
 
+# tiktoken 首次 get_encoding 需联网下载 BPE 词表；构建期预热进镜像，
+# 避免离线部署时运行期首次调用同步阻塞到 TCP 超时（约 1 分钟）冻结事件循环。
+# 构建机不通外网时跳过（|| true），运行期由 token_budget 的一次性失败记忆兜底。
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')" || true
+
 COPY backend/ /app/backend/
 COPY --from=frontend-builder /build/frontend/dist/ /app/backend/src/infrastructure/static/
 COPY deploy/docker/docker-entrypoint.sh /usr/local/bin/njbank-entrypoint

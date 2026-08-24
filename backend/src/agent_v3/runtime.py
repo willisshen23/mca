@@ -219,7 +219,10 @@ async def stream_agent_run(
         # 审计 state 的 messages 用 dict 而非旧框架的消息对象：
         # agent_run_history_service._original_user_text 对 dict 消息按
         # role/type ∈ {"human", "user"} 解析（源码已确认），语义与 v2 一致。
-        record_turn_start(
+        # 同步 SQLite 写放工作线程：pipeline 线程也在写同一库文件，
+        # 在事件循环上直接提交可能撞上 busy-timeout 冻结整个服务。
+        await asyncio.to_thread(
+            record_turn_start,
             {
                 "request_id": request_id,
                 "thread_id": thread_id,
@@ -228,7 +231,7 @@ async def stream_agent_run(
                 "channel": channel,
                 "messages": [{"role": "user", "content": message}],
                 "original_user_text": original_user_text or message,
-            }
+            },
         )
 
         agent = await get_v3_agent()
@@ -274,7 +277,8 @@ async def stream_agent_run(
             yield frame_text
 
         duration_ms = int((time.monotonic() - started) * 1000)
-        finish_turn(
+        await asyncio.to_thread(
+            finish_turn,
             request_id,
             final_status,
             duration_ms,
@@ -291,7 +295,9 @@ async def stream_agent_run(
     except Exception as exc:
         duration_ms = int((time.monotonic() - started) * 1000)
         logger.exception("agent_v3 run 异常: thread=%s request=%s", thread_id, request_id)
-        finish_turn(request_id, "failed", duration_ms, failure_reason=str(exc)[:500])
+        await asyncio.to_thread(
+            finish_turn, request_id, "failed", duration_ms, failure_reason=str(exc)[:500]
+        )
         yield _frame("error", {"message": str(exc)[:300]})
     finally:
         _cancelled.pop(thread_id, None)
@@ -340,7 +346,8 @@ async def stream_agent_resume(
     )
 
     try:
-        record_turn_start(
+        await asyncio.to_thread(
+            record_turn_start,
             {
                 "request_id": request_id,
                 "thread_id": thread_id,
@@ -349,7 +356,7 @@ async def stream_agent_resume(
                 "channel": channel,
                 "messages": [{"role": "user", "content": audit_text}],
                 "original_user_text": message or audit_text,
-            }
+            },
         )
 
         payload: dict = {"decision": decision}
@@ -388,12 +395,16 @@ async def stream_agent_resume(
             yield frame_text
 
         duration_ms = int((time.monotonic() - started) * 1000)
-        finish_turn(request_id, final_status, duration_ms, final_values,
-                    failure_reason=failure_reason)
+        await asyncio.to_thread(
+            finish_turn, request_id, final_status, duration_ms, final_values,
+            failure_reason=failure_reason,
+        )
     except Exception as exc:
         duration_ms = int((time.monotonic() - started) * 1000)
         logger.exception("agent_v3 resume 异常: thread=%s request=%s", thread_id, request_id)
-        finish_turn(request_id, "failed", duration_ms, failure_reason=str(exc)[:500])
+        await asyncio.to_thread(
+            finish_turn, request_id, "failed", duration_ms, failure_reason=str(exc)[:500]
+        )
         yield _frame("error", {"message": str(exc)[:300]})
     finally:
         _cancelled.pop(thread_id, None)

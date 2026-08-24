@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   activityName, activityId, activityRowNumber, activityPeriod,
   compactActivity, selectedActivityRowNumbers, toggleActivitySelectionPure,
-  selectionActivities, allActivitySelectionChecked
+  selectionActivities, allActivitySelectionChecked, selectableActivityRowCount
 } from './activityFormat.js';
 
 describe('activityFormat', () => {
@@ -59,5 +59,44 @@ describe('activityFormat', () => {
     };
     expect(allActivitySelectionChecked(message)).toBe(true);
     expect(selectionActivities({ activities: [{ activity_id: 'A1' }] })).toHaveLength(1);
+  });
+
+  it('selectableActivityRowCount 识别正文中的可选活动表格', () => {
+    const text = [
+      '查到以下活动：',
+      '| 序号 | 活动名称 | 渠道 |',
+      '| --- | --- | --- |',
+      '| 1 | 活动A | 短信 |',
+      '| 2 | 活动B | 外呼 |',
+      '| 3 | 活动C | 短信 |',
+      '请选择要分析的活动。'
+    ].join('\n');
+    expect(selectableActivityRowCount({ text })).toBe(3);
+  });
+
+  it('selectableActivityRowCount 决策类纯文字提问返回 0', () => {
+    // 业务状态里即使有 activity_list，正文无表格就不可选
+    const message = {
+      text: '请问您希望：\n1. 按外呼视角分析该活动；\n2. 补充其他活动一起分析？',
+      selectableActivities: [{ activity_id: 'A1' }, { activity_id: 'A2' }]
+    };
+    expect(selectableActivityRowCount(message)).toBe(0);
+    expect(selectableActivityRowCount({})).toBe(0);
+    expect(selectableActivityRowCount(null)).toBe(0);
+  });
+
+  it('selectableActivityRowCount 忽略非活动表格与非序号表格', () => {
+    const noActivityColumn = [
+      '| 序号 | 步骤 | 说明 |',
+      '| --- | --- | --- |',
+      '| 1 | 取数 | xxx |'
+    ].join('\n');
+    expect(selectableActivityRowCount({ text: noActivityColumn })).toBe(0);
+    const noRowNumberFirst = [
+      '| 活动名称 | 序号 |',
+      '| --- | --- |',
+      '| 活动A | 1 |'
+    ].join('\n');
+    expect(selectableActivityRowCount({ text: noRowNumberFirst })).toBe(0);
   });
 });

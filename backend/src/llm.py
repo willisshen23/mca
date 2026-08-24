@@ -17,6 +17,7 @@ P3 spike（Task 1）实测结论，直接决定本模块两处设计：
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -186,7 +187,7 @@ class GuardedModel:
         try:
             response = await self._model.invoke(messages, **kwargs)
         except Exception as exc:
-            self._persist_usage(run_id, started_at, t0, 0, "FAILED")
+            await self._persist_usage_async(run_id, started_at, t0, 0, "FAILED")
             # openjiuwen 把供应商异常包成 FrameworkError，原始异常在 __cause__ 链上
             if any(is_provider_context_limit_error(cause) for cause in _iter_causes(exc)):
                 raise ModelContextLengthExceeded(
@@ -198,8 +199,13 @@ class GuardedModel:
         token_cost = int(usage.get("total_tokens") or 0) if isinstance(usage, dict) else int(getattr(usage, "total_tokens", 0) or 0)
         logger.info("[LLM] 返回 %s run=%s 输出字符=%d Token=%d",
                     self._label, run_id[:8], len(getattr(response, "content", "") or ""), token_cost)
-        self._persist_usage(run_id, started_at, t0, token_cost, "SUCCESS")
+        await self._persist_usage_async(run_id, started_at, t0, token_cost, "SUCCESS")
         return response
+
+    async def _persist_usage_async(self, run_id: str, started_at, t0: float, token_cost: int, status: str) -> None:
+        """同步 SQLite 写放到工作线程，避免与 pipeline 线程写同一库文件时
+        busy-timeout 阻塞事件循环。"""
+        await asyncio.to_thread(self._persist_usage, run_id, started_at, t0, token_cost, status)
 
     def _persist_usage(self, run_id: str, started_at, t0: float, token_cost: int, status: str) -> None:
         try:

@@ -1,10 +1,46 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 from typing import Any
 
 MODEL_BUSY_MESSAGE = "系统正忙，请稍后重试"
+
+logger = logging.getLogger("njbank.agent")
+
+# tiktoken 首次 get_encoding 需联网下载 BPE 词表；离线/内网部署时该请求
+# 会同步阻塞到 TCP 超时（约 1 分钟），在事件循环线程上调用会冻结整个服务。
+# 因此只尝试一次：成功则进程内缓存，失败则永久回退字符估算，不再重复联网。
+_tiktoken_encoding: Any = None
+_tiktoken_unavailable = False
+
+
+def _get_tiktoken_encoding() -> Any:
+    global _tiktoken_encoding, _tiktoken_unavailable
+    if _tiktoken_encoding is not None or _tiktoken_unavailable:
+        return _tiktoken_encoding
+    try:
+        import tiktoken
+
+        _tiktoken_encoding = tiktoken.get_encoding("cl100k_base")
+    except Exception:
+        _tiktoken_unavailable = True
+        logger.warning(
+            "tiktoken cl100k_base 加载失败（疑似离线环境无法下载词表），"
+            "后续 token 估算全部退化为字符估算",
+            exc_info=True,
+        )
+    return _tiktoken_encoding
+
+
+def warm_token_estimator() -> None:
+    """预热 token 估算器（触发一次性 tiktoken 词表加载）。
+
+    可能在离线环境下阻塞到网络超时，调用方须放在工作线程中执行
+    （如 lifespan 里 asyncio.to_thread），切勿在事件循环线程直接调用。
+    """
+    _get_tiktoken_encoding()
 
 
 class ModelContextLengthExceeded(RuntimeError):
@@ -22,14 +58,15 @@ def estimate_text_tokens(text: str) -> int:
     """估算文本 Token 数；Tokenizer 不可用时采用保守字符估算。"""
     if not text:
         return 0
-    try:
-        import tiktoken
-
-        return len(tiktoken.get_encoding("cl100k_base").encode(text))
-    except Exception:
-        non_ascii = sum(1 for char in text if ord(char) > 127)
-        ascii_chars = len(text) - non_ascii
-        return non_ascii + math.ceil(ascii_chars / 4)
+    encoding = _get_tiktoken_encoding()
+    if encoding is not None:
+        try:
+            return len(encoding.encode(text))
+        except Exception:
+            pass
+    non_ascii = sum(1 for char in text if ord(char) > 127)
+    ascii_chars = len(text) - non_ascii
+    return non_ascii + math.ceil(ascii_chars / 4)
 
 
 def estimate_model_request_tokens(messages: list[Any], options: dict[str, Any] | None = None) -> int:
