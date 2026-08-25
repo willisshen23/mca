@@ -3,8 +3,19 @@
 > **当前运行时**：openJiuwen agent-core（v3 为唯一运行时）。本文档是部署总入口，
 > 整合了 **tar 包离线部署**、**Docker 部署** 与 **LLM API Key 密文配置** 三部分内容。
 >
-> 麒麟 V10 (ky10) x86_64 全离线场景（目标机无系统 Python，使用便携 Python 包，
-> 由 `offline-v3/` 构建）另见 [DEPLOY-OFFLINE-KYLIN.md](DEPLOY-OFFLINE-KYLIN.md) 第 0 章。
+> **目标架构**：x86_64 与 arm64（aarch64，如麒麟 V10 鲲鹏/飞腾机型）均支持，
+> 三条出包通道（tar 包 / Docker 镜像 / 麒麟全离线包）均按架构分别出包，
+> 产物名带 `-amd64` / `-arm64` 后缀。
+>
+> **pyc-only 出包**：所有通道均先编译再打包——前端经 `npm run build` 编译，
+> 后端业务代码（`backend/src`、`mock/`、`ops/src`）经 `compileall` 编译为
+> 字节码后**剥离 .py 源码**（运维脚本 `backend/scripts/*.py` 保留源码）。
+> .pyc 与 CPU 架构无关但严格绑定 Python 3.12，tar 包目标机的系统 Python
+> 必须是 3.12。
+>
+> 麒麟 V10 (ky10) 全离线场景（目标机无系统 Python，使用便携 Python 包，
+> 由 `offline-v3/` 构建，x86_64 与 arm64 均可）另见
+> [DEPLOY-OFFLINE-KYLIN.md](DEPLOY-OFFLINE-KYLIN.md) 第 0 章。
 >
 > **从旧版环境拷贝 `.env` 时若含 `AGENT_V3_ENABLED` 键必须删除**——该键已随
 > v3 迁移移除，残留会因 pydantic-settings extra-forbid 校验导致应用启动失败。
@@ -103,7 +114,8 @@
 | 条件 | 要求 |
 |------|------|
 | 操作系统 | Linux (CentOS 7+ / Ubuntu 20.04+ / 麒麟 V10) 或 macOS |
-| Python | 3.10+（建议 3.12） |
+| 架构 | x86_64 或 arm64（aarch64），构建时按架构分别出包 |
+| Python | **3.12**（产物为 pyc-only 字节码，严格绑定 minor 版本） |
 | 磁盘空间 | >= 2GB（含依赖） |
 | 内存 | >= 4GB |
 | 内网访问 | 可访问内网 LLM 服务与银行营销业务 API（或本机 Mock） |
@@ -114,6 +126,7 @@
 | 条件 | 要求 |
 |------|------|
 | Docker | Docker Desktop（Windows 11/macOS，需 Linux containers）或 Docker Engine（Linux） |
+| 架构 | 目标机 x86_64 或 arm64；构建机架构不限（交叉构建走 Docker 自带 binfmt/QEMU，较慢） |
 | Docker Compose | `docker compose`（新版插件）或 `docker-compose`（旧版）任一可用 |
 | 磁盘空间 | >= 5GB（含基础镜像与构建缓存） |
 | 内存 | >= 4GB |
@@ -137,40 +150,53 @@ bash scripts/build.sh
 2. 构建前端静态文件（npm run build），并校验产物完整性
 3. 复制 `frontend/dist/` → `backend/src/infrastructure/static/`
    （应用只挂载该目录；`backend/src/static/` 为历史遗留目录，不要使用）
-4. 下载 Python 依赖离线包到 `backend/wheels/`
-5. 打包为 `activity-analysis-assistant-YYYYMMDD-HHMMSS.tar.gz`
+4. 按靶机架构/版本下载 Python 依赖离线包到 `backend/wheels/`
+5. 复制到临时 staging 目录，调用 `scripts/compile-pyc.sh` 把 `backend/src`
+   编译为字节码并**剥离 .py 源码**（pyc-only，运维脚本 `backend/scripts/*.py` 保留源码）；
+   同时把 `skills.db` / `v3_checkpoints.db` 用 `sqlite3 .backup` 一致性快照进包作种子数据
+   （**不含** `.env`、主密钥 `data/secrets/`、日志、上传/产出文件、测试与缓存）
+6. 打包为 `activity-analysis-assistant-<架构>-YYYYMMDD-HHMMSS.tar.gz`
 
-如果靶机 Python 版本或平台与开发机不同，通过环境变量指定：
+通过环境变量指定靶机架构与 Python 版本：
 
 ```bash
-# 靶机 Python 3.10, Linux x86_64
-TARGET_PYTHON_VERSION=310 TARGET_PLATFORM=manylinux2014_x86_64 bash scripts/build.sh
+# 靶机 Linux x86_64（默认 Python 3.12）
+TARGET_PLATFORM="manylinux2014_x86_64 manylinux_2_17_x86_64 manylinux_2_28_x86_64" \
+    bash scripts/build.sh
 
-# 靶机 Python 3.12, macOS arm64
-TARGET_PYTHON_VERSION=312 TARGET_PLATFORM=macosx_11_0_arm64 bash scripts/build.sh
+# 靶机 Linux arm64（aarch64，如麒麟 V10 鲲鹏/飞腾机型）
+TARGET_ARCH=arm64 \
+TARGET_PLATFORM="manylinux2014_aarch64 manylinux_2_17_aarch64 manylinux_2_28_aarch64" \
+    bash scripts/build.sh
+
+# 靶机 Python 3.10（须同时提供同版本的编译解释器，pyc 严格绑定 minor 版本）
+TARGET_PYTHON_VERSION=310 COMPILE_PYTHON=python3.10 \
+TARGET_PLATFORM=manylinux2014_x86_64 bash scripts/build.sh
 ```
 
-若未指定，自动检测开发机 Python 版本。
+未指定 `TARGET_PLATFORM` 时按本机架构出包；`COMPILE_PYTHON`（默认 `python3.12`）
+的 minor 版本必须与 `TARGET_PYTHON_VERSION` 一致，否则构建直接失败。
 
-> 麒麟 V10 (ky10) x86_64 全离线目标机的构建请改用 `offline-v3/build.sh`
+> 麒麟 V10 (ky10) 全离线目标机（x86_64 或 arm64）的构建请改用 `offline-v3/build.sh`
 > （自带便携 Python 与全量 wheel 闭包，含断网验证），见
 > [DEPLOY-OFFLINE-KYLIN.md](DEPLOY-OFFLINE-KYLIN.md) 第 0 章。
 
 产物布局：
 
 ```
-activity-analysis-assistant-YYYYMMDD-HHMMSS.tar.gz
+activity-analysis-assistant-<架构>-YYYYMMDD-HHMMSS.tar.gz
 ├── backend/
-│   ├── src/              # 后端源码（含 src/infrastructure/static/ 前端产物）
-│   ├── wheels/           # Python 离线依赖包
+│   ├── src/              # 后端业务代码（pyc-only：仅 .pyc，含 src/infrastructure/static/ 前端产物）
+│   ├── wheels/           # Python 离线依赖包（按靶机架构下载）
 │   ├── requirements.txt  # 依赖清单
 │   ├── .env.example      # 配置模板
 │   ├── scripts/
-│   │   ├── start.sh      # 目标机启动脚本（系统 Python）
+│   │   ├── start.sh      # 目标机启动脚本（系统 Python，须 3.12）
 │   │   ├── migrate-db.sh # 数据库初始化/迁移（start.sh 自动调用）
 │   │   ├── server.sh     # 常驻运行管理脚本（start/stop/restart/status）
 │   │   └── env_secret.py # LLM API Key 密文工具
-│   └── data/             # 数据目录（空）
+│   └── data/             # 种子数据库（skills.db / v3_checkpoints.db 一致性快照）
+│                         # 不含 .env / 主密钥 / 日志 / 上传与产出文件
 └── frontend/
     └── package.json      # 前端依赖清单参考
 ```
@@ -237,7 +263,7 @@ bash scripts/start.sh
 ```
 
 首次运行会：
-1. 检测 Python 版本（3.10+）
+1. 检测 Python 版本（须 3.12，与构建期 `TARGET_PYTHON_VERSION` 一致——产物为 pyc-only 字节码）
 2. 创建虚拟环境 `venv/`
 3. 从 `wheels/` 离线安装依赖
 4. 检查 `.env` 配置，未配置则**交互式引导**输入内网 LLM 信息
@@ -288,7 +314,7 @@ open http://localhost:8000
 
 | 文件 | 作用 |
 |------|------|
-| [deploy/docker/Dockerfile](deploy/docker/Dockerfile) | 多阶段构建：`frontend-builder`（Node 20 编译前端）、`runtime`（主应用）、`mock-runtime`（Mock 接口） |
+| [deploy/docker/Dockerfile](deploy/docker/Dockerfile) | 多阶段构建：`frontend-builder`（Node 20 编译前端）、`runtime`（主应用）、`mock-runtime`（Mock 接口）；业务代码在构建期编译为 .pyc 并剥离 .py 源码 |
 | [deploy/docker/docker-compose.yml](deploy/docker/docker-compose.yml) | 编排 app + mock 两个服务，含健康检查 |
 | [deploy/docker/docker-entrypoint.sh](deploy/docker/docker-entrypoint.sh) | 容器入口：初始化数据目录并启动 uvicorn |
 | [deploy/docker/docker-deploy.sh](deploy/docker/docker-deploy.sh) | Linux/macOS 一键部署脚本 |
@@ -364,61 +390,72 @@ open http://localhost:9111
 **一键打包（推荐，含数据库数据）：**
 
 ```bash
+# 目标机 x86_64（默认）
 bash deploy/docker/build-offline-images.sh
+
+# 目标机 arm64（aarch64，如麒麟 V10 鲲鹏/飞腾机型）
+PLATFORM=linux/arm64 bash deploy/docker/build-offline-images.sh
 ```
 
 脚本自动完成：数据库快照（`backend/data/skills.db`、`v3_checkpoints.db`
 经 `sqlite3 .backup` 一致性快照到 `deploy/docker/seed-data/`，打入主应用镜像
-`/app/backend/seed-data/`）→ 构建两个镜像 → 导出 `offline-dist/*.tar.gz`
+`/app/backend/seed-data/`）→ 构建两个镜像 → 导出 `offline-dist/*-<架构>.tar.gz`
 及 `MANIFEST.sha256`。也支持分步执行：`snapshot` / `build` / `export`。
 
+- 镜像 tag 与 tar 文件名均带架构后缀（如 `njbank-activity-analysis:latest-arm64`、
+  `njbank-activity-analysis-image-arm64.tar.gz`），两种架构产物互不覆盖；
+- 构建机与目标机架构不同时走 Docker 自带 binfmt/QEMU 交叉构建（如 x86_64 机构建
+  arm64 镜像），速度较慢属正常现象；
+- 镜像内的后端业务代码为**字节码编译后的 .pyc**（Dockerfile 构建期执行
+  `compileall` 并剥离 .py 源码，编译或导入失败即构建失败）；
 - 构建机访问 PyPI 不稳定时默认走清华镜像，可用 `PIP_INDEX_URL=<镜像地址>` 覆盖
-  （设为空则走默认源）。
+  （设为空则走默认源）；
 - 目标机首次启动时，入口脚本自动把镜像内的种子库拷入 `runtime-data` 卷
-  （**只补缺失、不覆盖**——已有运行数据不会被镜像内数据冲掉）。
+  （**只补缺失、不覆盖**——已有运行数据不会被镜像内数据冲掉）；
 - 不想带数据时删除 `deploy/docker/seed-data/*.db` 再构建即可。
 
-以下为手动分步方式（与脚本等价）：
+以下为手动分步方式（与脚本等价，以 arm64 为例）：
 
 **构建镜像：**
 
 ```bash
-# 主应用镜像
-docker build -f deploy/docker/Dockerfile --target runtime \
-    -t njbank-activity-analysis:latest .
+# 主应用镜像（x86_64 目标机把 --platform 与 tag 后缀换成 linux/amd64 / -amd64）
+docker build --platform linux/arm64 -f deploy/docker/Dockerfile --target runtime \
+    -t njbank-activity-analysis:latest-arm64 .
 
 # Mock 接口镜像（可选，生产直连真实接口可跳过）
-docker build -f deploy/docker/Dockerfile --target mock-runtime \
-    -t njbank-activity-analysis-mock:latest .
+docker build --platform linux/arm64 -f deploy/docker/Dockerfile --target mock-runtime \
+    -t njbank-activity-analysis-mock:latest-arm64 .
 ```
 
-> 构建机为 Apple Silicon（arm64）时必须加 `--platform linux/amd64`
-> （目标机麒麟 ky10 为 x86_64），否则导出的镜像无法在目标机运行；
-> Intel/AMD 构建机可省略该参数。
+> 目标机架构必须与 `--platform` 一致，否则镜像无法在目标机运行；
+> 同架构构建（如 x86_64 机构建 x86_64 镜像）可省略 `--platform`。
 
 **导出镜像：**
 
 ```bash
-docker save njbank-activity-analysis:latest \
-    | gzip > njbank-activity-analysis-image.tar.gz
+docker save njbank-activity-analysis:latest-arm64 \
+    | gzip > njbank-activity-analysis-image-arm64.tar.gz
 
-docker save njbank-activity-analysis-mock:latest \
-    | gzip > njbank-activity-analysis-mock-image.tar.gz
+docker save njbank-activity-analysis-mock:latest-arm64 \
+    | gzip > njbank-activity-analysis-mock-image-arm64.tar.gz
 
 # 生成校验文件
-shasum -a 256 njbank-activity-analysis-image.tar.gz \
-    > njbank-activity-analysis-image.tar.gz.sha256
+shasum -a 256 njbank-activity-analysis-image-arm64.tar.gz \
+    > njbank-activity-analysis-image-arm64.tar.gz.sha256
 ```
 
-**传输并导入：**
+**传输并导入（导入后需回标 latest，Compose 引用不带后缀的标签）：**
 
 ```bash
-scp njbank-activity-analysis-image.tar.gz* user@目标机:/opt/
+scp njbank-activity-analysis-image-arm64.tar.gz* user@目标机:/opt/
 ssh user@目标机
 
 cd /opt
-sha256sum -c njbank-activity-analysis-image.tar.gz.sha256
-gunzip -c njbank-activity-analysis-image.tar.gz | docker load
+sha256sum -c njbank-activity-analysis-image-arm64.tar.gz.sha256
+gunzip -c njbank-activity-analysis-image-arm64.tar.gz | docker load
+docker tag njbank-activity-analysis:latest-arm64 njbank-activity-analysis:latest
+docker tag njbank-activity-analysis-mock:latest-arm64 njbank-activity-analysis-mock:latest
 ```
 
 **目标机启动：**
@@ -955,8 +992,8 @@ bash deploy/docker/docker-deploy.sh up  # 重新构建镜像并替换容器
 ### 11.1 服务无法启动
 
 ```bash
-# 检查 Python 版本
-python3 --version  # 需要 >= 3.10
+# 检查 Python 版本（pyc-only 产物，须与构建期版本一致，默认 3.12）
+python3 --version
 
 # 检查端口占用
 lsof -i :8000    # tar 部署

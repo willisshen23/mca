@@ -1,9 +1,13 @@
-# 活动分析助手 — 全离线部署指南（麒麟 V10 / x86_64）
+# 活动分析助手 — 全离线部署指南（麒麟 V10 / x86_64 / arm64）
 
 > **【openJiuwen 版（agent_v3）部署请看这里】** 2026-08-12 起运行时迁移至 openJiuwen
 > agent-core（v3 为唯一运行时）。新离线包由 `offline-v3/` 构建与验证，见本文
 > [第 0 章](#0-openjiuwen-版agent_v3离线部署p4)。下文第 1-9 章为 langchain 时代
 > 旧版流程，仅作历史归档保留。
+>
+> **2026-08-24 起支持 arm64（aarch64，鲲鹏/飞腾等麒麟 V10 机型）**：构建时设
+> `TARGET_ARCH=aarch64` 即可，包名带 `-arm64` 后缀；业务代码为字节码编译后的
+> pyc-only 产物（无 .py 源码）。
 
 ---
 
@@ -13,9 +17,11 @@
 
 | 项 | 旧版（langchain） | 新版（openJiuwen v3） |
 |---|---|---|
-| 构建脚本 | `scripts/build-offline-package.sh`（需 Linux 构建机） | `offline-v3/build.sh`（本机 Docker，linux/amd64） |
-| wheel 集 | `offline-bundle/wheels`（langchain 系，已归档） | `offline-v3/wheels`（openJiuwen 全量闭包） |
-| 构建验证 | 无 | `offline-v3/verify.sh`（断网安装 + 业务冒烟） |
+| 构建脚本 | `scripts/build-offline-package.sh`（需 Linux 构建机） | `offline-v3/build.sh`（本机 Docker，linux/amd64 容器即可同时出 x86_64/arm64 包） |
+| 目标架构 | 仅 x86_64 | x86_64（默认）/ arm64（`TARGET_ARCH=aarch64`） |
+| 业务代码形态 | Python 源码 | pyc-only（构建期 `compileall` 编译并剥离 .py，运维脚本保留源码） |
+| wheel 集 | `offline-bundle/wheels`（langchain 系，已归档） | `offline-v3/wheels`（x86_64）/ `offline-v3/wheels-aarch64`（arm64），openJiuwen 全量闭包 |
+| 构建验证 | 无 | `offline-v3/verify.sh`（断网安装 + 业务冒烟，按包名自动匹配容器架构） |
 | 目标机部署 | `bash deploy-offline.sh` | **不变** |
 
 > **警示**：旧 `scripts/build-offline-package.sh` 及历史 tar 包的前端拷贝目标
@@ -36,9 +42,18 @@
 
 ```bash
 cd frontend && npm ci && npm run build && cd ..
+
+# x86_64 目标机（默认）
 docker run --rm --platform linux/amd64 -v "$PWD":/workspace -w /workspace \
   python:3.12-bookworm bash offline-v3/build.sh
-# 产物: offline-v3/dist/activity-analysis-assistant-offline-<时间戳>.tar.gz
+# 产物: offline-v3/dist/activity-analysis-assistant-offline-amd64-<时间戳>.tar.gz
+
+# arm64 目标机（aarch64，鲲鹏/飞腾等麒麟 V10 机型）
+# wheel 下载、便携 Python、字节码编译均跨架构可行，仍在 linux/amd64 容器中构建
+docker run --rm --platform linux/amd64 -e TARGET_ARCH=aarch64 \
+  -v "$PWD":/workspace -w /workspace \
+  python:3.12-bookworm bash offline-v3/build.sh
+# 产物: offline-v3/dist/activity-analysis-assistant-offline-arm64-<时间戳>.tar.gz
 ```
 
 ### 0.3 构建后验证（可选但强烈建议）
@@ -47,6 +62,8 @@ docker run --rm --platform linux/amd64 -v "$PWD":/workspace -w /workspace \
 # 前置: 宿主机起 mock（backend/venv/bin/python mock/app.py），backend/.env 配好 LLM
 bash offline-v3/verify.sh
 # 通过标准: 输出 VERIFY-PASS（阶段1=断网安装铁证闭包完备；阶段2=对话/审批/报告冒烟）
+# verify.sh 按包名自动选择 linux/amd64 或 linux/arm64 容器；
+# 在 x86_64 构建机上验证 arm64 包走 Docker 自带 QEMU 模拟，明显更慢属正常
 ```
 
 ### 0.4 目标机部署
@@ -56,11 +73,12 @@ bash offline-v3/verify.sh
 
 ---
 
-> 适用目标机：`Linux uat-coapapB1 4.19.90-52.22.v2207.ky10.x86_64 ... x86_64 GNU/Linux`
-> 即 **银河麒麟 V10 (ky10)，x86_64 架构，内核 4.19.90**。
+> 适用目标机：银河麒麟 V10 (ky10)，**x86_64 或 arm64（aarch64）** 架构，内核 4.19+。
+> 如 `Linux uat-coapapB1 4.19.90-52.22.v2207.ky10.x86_64 ... x86_64 GNU/Linux`
+> 或鲲鹏/飞腾机型的 `... ky10.aarch64 ... aarch64 GNU/Linux`。
 >
 > 本指南针对 **完全无外网** 的目标机，且 **目标机未预装 Python**。
-> 部署包内自带 **便携版 Python 3.12** 与全部 **Python 离线依赖（wheel）**，
+> 部署包内自带 **便携版 Python 3.12**（架构随包）与全部 **Python 离线依赖（wheel）**，
 > 无需在目标机编译、无需联网、无需安装系统级 Python。
 
 ---

@@ -164,3 +164,7 @@ offline-v3/dist/
 offline-dist/
 deploy/docker/seed-data/*
 !deploy/docker/seed-data/.gitkeep
+
+# 构建期下载的离线依赖缓存（大文件，不入库）
+backend/wheels/
+offline-v3/wheels-aarch64/*.whl

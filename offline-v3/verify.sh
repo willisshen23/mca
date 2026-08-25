@@ -18,9 +18,16 @@ else
 fi
 echo "验证目标: $PKG"
 
+# 按包名架构后缀选择容器平台；跨架构验证依赖 Docker binfmt/QEMU（慢但可用）
+case "$(basename "$PKG")" in
+    *-arm64-*) VERIFY_PLATFORM="linux/arm64" ;;
+    *)         VERIFY_PLATFORM="linux/amd64" ;;
+esac
+echo "验证平台: $VERIFY_PLATFORM（构建机 $(uname -m)，跨架构时走 QEMU 模拟）"
+
 echo ""
 echo ">>> 阶段 1/2: 断网离线安装验证 (debian:buster-slim, --network none)"
-docker run --rm -i --platform linux/amd64 --network none \
+docker run --rm -i --platform "$VERIFY_PLATFORM" --network none \
     -v "$PKG":/pkg/package.tar.gz:ro \
     debian:buster-slim bash -s <<'STAGE1'
 set -euo pipefail
@@ -68,7 +75,7 @@ else
     echo "提示: 未能从 frontend/dist/index.html 提取哈希资产，smoke 将跳过前端新鲜度断言"
 fi
 
-docker run --rm -i --platform linux/amd64 \
+docker run --rm -i --platform "$VERIFY_PLATFORM" \
     -e LLM_BASE_URL -e LLM_API_KEY -e LLM_MODEL \
     -e EXPECTED_ASSET \
     -v "$PKG":/pkg/package.tar.gz:ro \

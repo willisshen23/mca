@@ -36,6 +36,13 @@ RUN if [ -n "$PIP_INDEX_URL" ]; then \
 
 COPY mock/ /app/mock/
 
+# 业务代码字节码编译：compileall 失败（语法错误）或导入失败即构建失败；
+# 镜像内只保留 .pyc（无源码布局，与架构无关、绑定 Python 3.12）。
+RUN python -m compileall -q -b /app/mock \
+    && find /app/mock -type f -name '*.py' -delete \
+    && find /app/mock -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && python -c "import app"
+
 EXPOSE 8005
 
 CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8005", "--log-level", "info"]
@@ -77,6 +84,15 @@ RUN sed -i 's/\r$//' /usr/local/bin/njbank-entrypoint \
     && mkdir -p /app/backend/data/uploads \
         /app/backend/data/outputs \
         /app/backend/data/logs
+
+# 业务代码字节码编译：compileall 失败（语法错误）即构建失败；
+# 镜像内只保留 .pyc（无源码布局，与架构无关、绑定 Python 3.12）。
+# backend/scripts/*.py 为运维工具（migrate_db.py / env_secret.py），保留源码。
+RUN python -m compileall -q -b /app/backend/src \
+    && find /app/backend/src -type f -name '*.py' -delete \
+    && find /app/backend/src -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && LLM_BASE_URL=http://placeholder LLM_MODEL=placeholder \
+       python -c "import src.main"
 
 EXPOSE 8000
 

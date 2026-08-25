@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# start-offline.sh — 全离线环境启动脚本 (麒麟 V10 ky10 x86_64)
+# start-offline.sh — 全离线环境启动脚本 (麒麟 V10 ky10 x86_64 / arm64)
 #
 # 与 start.sh 的区别:
 #   - 不依赖目标机预装的系统 Python
-#   - 使用部署包内自带的便携版 Python (offline-bundle/python)
+#   - 使用部署包内自带的便携版 Python (offline-bundle/python，架构随包)
 #   - 从 offline-bundle/wheels 离线安装依赖 (不联网)
 #
 # 目录约定 (解压后):
@@ -25,7 +25,7 @@ PY_HOME="$BUNDLE_DIR/python/python"   # 解压后的便携 Python 根目录
 
 echo "============================================"
 echo "  活动分析助手 - 全离线部署"
-echo "  (麒麟 V10 ky10 / x86_64 / 便携 Python)"
+echo "  (麒麟 V10 ky10 / $(uname -m) / 便携 Python)"
 echo "============================================"
 echo "部署根目录: $ROOT_DIR"
 echo ""
