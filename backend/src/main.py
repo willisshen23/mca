@@ -131,7 +131,7 @@ def _build_file_handler() -> TimedRotatingFileHandler | None:
 
 _file_handler = _build_file_handler()
 
-_log = logging.getLogger("njbank.agent")
+_log = logging.getLogger("activity-analysis.agent")
 _log.setLevel(log_level)
 if not _log.handlers:
     _handler = logging.StreamHandler(sys.stdout)

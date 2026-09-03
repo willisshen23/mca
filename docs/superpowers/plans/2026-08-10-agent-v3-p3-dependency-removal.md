@@ -262,7 +262,7 @@ from src.utils.token_budget import (
     is_provider_context_limit_error,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _model_cache: dict[str, "GuardedModel"] = {}
 

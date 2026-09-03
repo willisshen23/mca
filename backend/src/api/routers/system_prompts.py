@@ -19,7 +19,7 @@ from src.services.system_prompt_service import (
     validate_prompt_variables,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter(prefix="/system-prompts")
 

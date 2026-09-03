@@ -7,7 +7,7 @@ COMPOSE_FILE="$DEPLOY_DIR/docker-compose.yml"
 ENV_FILE="$PROJECT_ROOT/backend/.env"
 ENV_EXAMPLE="$PROJECT_ROOT/backend/.env.example"
 ACTION="${1:-up}"
-PROJECT_NAME="njbank-activity-analysis"
+PROJECT_NAME="activity-analysis"
 
 die() {
     printf '错误: %s\n' "$*" >&2

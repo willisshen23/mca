@@ -61,7 +61,7 @@ from src.services.agent_run_history_service import save_report_file
 from src.services.marketing_api_service import fetch_outbound_activity_data
 from src.utils.token_budget import MODEL_BUSY_MESSAGE
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 @dataclass

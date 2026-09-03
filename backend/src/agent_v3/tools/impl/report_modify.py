@@ -31,7 +31,7 @@ from src.config import get_settings
 from src.llm import get_model
 from src.services.agent_run_history_service import save_report_file
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def get_report_content(ctx: ToolContext, summary_length: int = 2000) -> str | ToolOutcome:
@@ -79,7 +79,7 @@ async def modify_report(
     if not instruction.strip():
         return error_content("缺少修改指令")
 
-    model = get_model("report_generation", temperature=0.2)
+    model = get_model("report_generation")
     prompt = _build_modify_prompt(html, instruction, report_context)
 
     try:

@@ -72,15 +72,15 @@ RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')" || true
 
 COPY backend/ /app/backend/
 COPY --from=frontend-builder /build/frontend/dist/ /app/backend/src/infrastructure/static/
-COPY deploy/docker/docker-entrypoint.sh /usr/local/bin/njbank-entrypoint
+COPY deploy/docker/docker-entrypoint.sh /usr/local/bin/activity-analysis-entrypoint
 
 # 数据库种子文件（可选）：由 build-offline-images.sh 在构建前生成。
 # 目标机首次启动时由入口脚本拷入数据卷（只补缺失，不覆盖已有数据）。
 COPY deploy/docker/seed-data/ /app/backend/seed-data/
 
 # 防止在 Windows 工作区构建时 CRLF 导致脚本无法执行。
-RUN sed -i 's/\r$//' /usr/local/bin/njbank-entrypoint \
-    && chmod +x /usr/local/bin/njbank-entrypoint \
+RUN sed -i 's/\r$//' /usr/local/bin/activity-analysis-entrypoint \
+    && chmod +x /usr/local/bin/activity-analysis-entrypoint \
     && mkdir -p /app/backend/data/uploads \
         /app/backend/data/outputs \
         /app/backend/data/logs
@@ -96,4 +96,4 @@ RUN python -m compileall -q -b /app/backend/src \
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/njbank-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/activity-analysis-entrypoint"]

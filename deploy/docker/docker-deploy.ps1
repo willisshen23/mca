@@ -10,7 +10,7 @@ $ComposeFile = Join-Path $DeployDir "docker-compose.yml"
 $EnvFile = Join-Path $ProjectRoot "backend\.env"
 $EnvExample = Join-Path $ProjectRoot "backend\.env.example"
 $RuntimeData = Join-Path $DeployDir "runtime-data"
-$ProjectName = "njbank-activity-analysis"
+$ProjectName = "activity-analysis"
 
 docker info *> $null
 if ($LASTEXITCODE -ne 0) {

@@ -120,7 +120,7 @@ PYTHON_ARCHIVE_URL="${PYTHON_ARCHIVE_URL:-https://github.com/astral-sh/python-bu
 PACKAGE_NAME="${PACKAGE_NAME:-activity-analysis-assistant-offline-$(date +%Y%m%d-%H%M%S).tar.gz}"
 DIST_DIR="$V3_DIR/dist"
 PACKAGE_PATH="$DIST_DIR/$PACKAGE_NAME"
-BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/njbank-offline-v3-build.XXXXXX")"
+BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/activity-analysis-offline-v3-build.XXXXXX")"
 STAGE_DIR="$BUILD_ROOT/activity-analysis-assistant"
 BUILD_VENV="$BUILD_ROOT/build-venv"
 

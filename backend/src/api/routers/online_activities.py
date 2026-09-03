@@ -8,7 +8,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from src.services.marketing_api_service import fetch_activity_list
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter(prefix="/online-activities")
 

@@ -42,10 +42,10 @@ case "$PLATFORM" in
     *) die "PLATFORM 仅支持 linux/amd64 或 linux/arm64，当前值: $PLATFORM" ;;
 esac
 
-APP_IMAGE="njbank-activity-analysis:latest-$ARCH"
-MOCK_IMAGE="njbank-activity-analysis-mock:latest-$ARCH"
-APP_TAR="njbank-activity-analysis-image-$ARCH.tar.gz"
-MOCK_TAR="njbank-activity-analysis-mock-image-$ARCH.tar.gz"
+APP_IMAGE="activity-analysis:latest-$ARCH"
+MOCK_IMAGE="activity-analysis-mock:latest-$ARCH"
+APP_TAR="activity-analysis-image-$ARCH.tar.gz"
+MOCK_TAR="activity-analysis-mock-image-$ARCH.tar.gz"
 
 snapshot() {
     command -v sqlite3 >/dev/null 2>&1 || die "未找到 sqlite3 命令，无法做数据库一致性快照"
@@ -117,7 +117,7 @@ export_images() {
 ============================================================
  打包完成。目标机（纯内网）操作步骤：
 ============================================================
-1. 传输以下文件到目标机（如 /opt/njbank/）：
+1. 传输以下文件到目标机（如 /opt/activity-analysis/）：
    - $DIST_DIR/$APP_TAR
    - $DIST_DIR/$MOCK_TAR
    - $DIST_DIR/MANIFEST.sha256
@@ -125,12 +125,12 @@ export_images() {
    - 已配置好的 backend/.env
 
 2. 目标机导入镜像并回标 latest（Compose 引用不带后缀的标签）：
-   cd /opt/njbank/offline-dist   # 按实际存放路径
+   cd /opt/activity-analysis/offline-dist   # 按实际存放路径
    sha256sum -c MANIFEST.sha256
    gunzip -c $APP_TAR | docker load
    gunzip -c $MOCK_TAR | docker load
-   docker tag $APP_IMAGE njbank-activity-analysis:latest
-   docker tag $MOCK_IMAGE njbank-activity-analysis-mock:latest
+   docker tag $APP_IMAGE activity-analysis:latest
+   docker tag $MOCK_IMAGE activity-analysis-mock:latest
 
 3. 目标机启动（不要用 up，会触发联网构建）：
    cd deploy/docker
@@ -150,7 +150,7 @@ bundle() {
     [ -f "$DIST_DIR/$MOCK_TAR" ] || die "缺少 $DIST_DIR/$MOCK_TAR，请先执行 export（或 all）"
     [ -f "$PROJECT_ROOT/backend/.env" ] || die "缺少 backend/.env"
 
-    local bundle_name="njbank-offline-bundle"
+    local bundle_name="activity-analysis-offline-bundle"
     local bundle_root="$DIST_DIR/$bundle_name"
     rm -rf "$bundle_root"
     mkdir -p \
@@ -196,8 +196,8 @@ gunzip -c __MOCK_TAR__ | docker load
 cd ..
 
 # Compose 编排引用的是不带架构后缀的 latest 标签，导入后回标
-docker tag __APP_IMAGE__ njbank-activity-analysis:latest
-docker tag __MOCK_IMAGE__ njbank-activity-analysis-mock:latest
+docker tag __APP_IMAGE__ activity-analysis:latest
+docker tag __MOCK_IMAGE__ activity-analysis-mock:latest
 
 bash deploy/docker/docker-deploy.sh up-no-build
 

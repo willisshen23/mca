@@ -6,7 +6,7 @@ import time
 from src.report_pipeline.state import AgentState
 from src.services.marketing_api_service import fetch_outbound_activity_data
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def outbound_activity_data_fetch_node(state: AgentState) -> dict:

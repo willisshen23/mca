@@ -22,7 +22,7 @@ from src.agent_v3.events._frames import (
 )
 from src.agent_v3.tools import TOOL_DISPLAY_NAMES
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def _normalize_tool_args(tool_args) -> dict:
@@ -173,7 +173,7 @@ class ToolProgressRail(AgentRail):
         if ctx.inputs.tool_name in self._suppressed or ctx.session is None:
             return
         await ctx.session.write_custom_stream({
-            "njbank": "tool_progress",
+            "activity-analysis": "tool_progress",
             "tool": ctx.inputs.tool_name,
             "status": "running",
             "args_summary": _args_summary(_normalize_tool_args(ctx.inputs.tool_args)),
@@ -184,7 +184,7 @@ class ToolProgressRail(AgentRail):
             return
         if ctx.inputs.tool_name not in self._suppressed:
             await ctx.session.write_custom_stream({
-                "njbank": "tool_progress",
+                "activity-analysis": "tool_progress",
                 "tool": ctx.inputs.tool_name,
                 "status": "done",
                 "summary": _summarize_content(ctx.inputs.tool_result),
@@ -200,4 +200,4 @@ class ToolProgressRail(AgentRail):
         if "report_context" in data:
             data["report_context"] = _compact_report_context(data["report_context"])
         if data:
-            await ctx.session.write_custom_stream({"njbank": "state_update", "data": data})
+            await ctx.session.write_custom_stream({"activity-analysis": "state_update", "data": data})

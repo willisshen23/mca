@@ -37,7 +37,7 @@ if [ -z "$TARGET_ARCH" ]; then
 fi
 echo "=== 目标架构: $TARGET_ARCH  靶机 Python: $TARGET_PYTHON_VERSION"
 
-STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/njbank-tar-build.XXXXXX")"
+STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/activity-analysis-tar-build.XXXXXX")"
 cleanup() { rm -rf "$STAGE_ROOT"; }
 trap cleanup EXIT
 

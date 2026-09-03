@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 else:
     AgentState = dict
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 REPORT_HTML_GUARD_FAILURE_MESSAGE = "当前模型访问量较大，请稍后重试。"
 _GENERATION_STEPS = {"marketing_report_synthesis", "report_generation"}

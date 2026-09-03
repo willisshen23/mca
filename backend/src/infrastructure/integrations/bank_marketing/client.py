@@ -14,7 +14,7 @@ from src.config import get_settings
 from src.infrastructure.integrations.bank_marketing.schemas import ApiResult
 from src.domain.report.template_skill import merge_template_skill_order
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 class BankMarketingApiClient:

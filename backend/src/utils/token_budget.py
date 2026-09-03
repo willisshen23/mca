@@ -7,7 +7,7 @@ from typing import Any
 
 MODEL_BUSY_MESSAGE = "系统正忙，请稍后重试"
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 # tiktoken 首次 get_encoding 需联网下载 BPE 词表；离线/内网部署时该请求
 # 会同步阻塞到 TCP 超时（约 1 分钟），在事件循环线程上调用会冻结整个服务。

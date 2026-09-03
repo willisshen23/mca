@@ -20,7 +20,7 @@ from src.infrastructure.db.models import (
     ConversationTurn,
 )
 
-logger = logging.getLogger("njbank.migrations")
+logger = logging.getLogger("activity-analysis.migrations")
 
 
 def ensure_request_id_fk_compatible(engine: Engine) -> None:

@@ -27,7 +27,7 @@ from src.agent_v3.request_context import (
 )
 from src.services.conversation_log_service import finish_turn, record_turn_start
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _cancelled: dict[str, asyncio.Event] = {}
 

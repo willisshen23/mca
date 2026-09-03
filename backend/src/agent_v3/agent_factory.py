@@ -16,11 +16,9 @@ from src.agent_v3.tools import WRITE_TOOLS
 from src.agent_v3.rails import ApprovalEditRail, ToolCallLimitRail, ToolProgressRail
 from src.agent_v3.tools import ALL_V3_TOOLS
 from src.config import get_settings
-from src.llm import LoggingModel
+from src.llm import LoggingModel, resolve_temperature
 
-logger = logging.getLogger("njbank.agent")
-
-_MAX_TOOL_CALLS_PER_RUN = 8
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def build_v3_model_configs(settings) -> tuple[ModelClientConfig, ModelRequestConfig]:
@@ -30,11 +28,13 @@ def build_v3_model_configs(settings) -> tuple[ModelClientConfig, ModelRequestCon
         api_key=settings.agent_v2_main_llm_api_key or settings.llm_api_key,
         api_base=settings.agent_v2_main_llm_base_url or settings.llm_base_url,
         timeout=120,
+        # SDK 默认 3 次重试会把 429 限流放大成最多 4 倍实际请求，显式压低
+        max_retries=settings.llm_max_retries,
         verify_ssl=settings.llm_verify_ssl,
     )
     request_cfg = ModelRequestConfig(
         model=settings.agent_v2_main_llm_model or settings.llm_model,
-        temperature=0.1,
+        temperature=resolve_temperature(settings, "agent_v2_main"),
     )
     return client_cfg, request_cfg
 
@@ -59,8 +59,8 @@ async def get_v3_agent() -> ReActAgent:
             max_iterations=settings.agent_v3_max_iterations,
         )
         agent = ReActAgent(card=AgentCard(
-            id="njbank-marketing-agent-v3",
-            description="南京银行营销分析助手 v3",
+            id="activity-analysis-marketing-agent-v3",
+            description="营销分析助手 v3",
         )).configure(config)
         # 注入日志包装：每次访问大模型都把输入信息打印到日志
         model = LoggingModel(
@@ -72,7 +72,7 @@ async def get_v3_agent() -> ReActAgent:
             Runner.resource_mgr.add_tool(t)
             agent.ability_manager.add(t.card)
         await agent.register_rail(ApprovalEditRail(tool_names=sorted(WRITE_TOOLS)))
-        await agent.register_rail(ToolCallLimitRail(max_calls=_MAX_TOOL_CALLS_PER_RUN))
+        await agent.register_rail(ToolCallLimitRail(max_calls=settings.agent_v3_max_tool_calls_per_run))
         await agent.register_rail(ToolProgressRail())
         _agent = agent
         logger.info("agent_v3 ReActAgent initialized, tools=%s",

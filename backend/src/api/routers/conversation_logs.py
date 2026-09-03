@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 
 from src.services.conversation_log_service import get_thread_turns, list_turns
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter(prefix="/conversation-logs")
 

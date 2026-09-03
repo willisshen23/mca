@@ -26,7 +26,7 @@ from src.agent_v3.tools.impl import template as impl_template
 from src.agent_v3.tools.impl.context import ToolRequestContext
 from src.agent_v3.tools.impl.common import activity_key
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 #: impl 经 ToolContext.state 可能读取的 state 键全集（会话状态部分）
 _SESSION_STATE_KEYS = (

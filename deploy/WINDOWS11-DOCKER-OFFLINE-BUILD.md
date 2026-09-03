@@ -33,7 +33,7 @@ Windows 11 开发机需要满足：
 项目根目录示例：
 
 ```text
-E:\code\njbank_Marketing_Campaign_Analysis
+E:\code\activity-analysis
 ```
 
 ---
@@ -141,7 +141,7 @@ cp activity-analysis-assistant-offline-*.tar.gz /output/
 '@
 
 docker run --rm `
-  --name njbank-offline-builder `
+  --name activity-analysis-offline-builder `
   --platform linux/amd64 `
   -v "${ProjectRoot}:/source:ro" `
   -v "${ProjectRoot}:/output" `
@@ -346,13 +346,13 @@ docker info | Select-String `
 查看遗留容器：
 
 ```powershell
-docker ps -a --filter "name=njbank-offline-builder"
+docker ps -a --filter "name=activity-analysis-offline-builder"
 ```
 
 确认该容器不是正在运行的有效构建任务后，再删除：
 
 ```powershell
-docker rm -f njbank-offline-builder
+docker rm -f activity-analysis-offline-builder
 ```
 
 然后重新执行构建。

@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings
 
 from src.secrets import load_master_key, maybe_decrypt, looks_encrypted
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 AGENT_NAMES = [
     "supervisor",
@@ -36,6 +36,11 @@ def _agent_max_tokens_field(name: str) -> Field:
     return Field(default=0, ge=0, alias=f"{name.upper()}_LLM_MAX_TOKENS")
 
 
+def _agent_temperature_field(name: str) -> Field:
+    # -1 表示未配置，回退全局 llm_temperature（与 max_tokens 的 0-as-unset 同约定）
+    return Field(default=-1.0, alias=f"{name.upper()}_LLM_TEMPERATURE")
+
+
 # 所有可能存密文的 API Key 字段（全局 + 各角色），供解密 validator 使用。
 _API_KEY_FIELDS = ["llm_api_key"] + [f"{name}_llm_api_key" for name in AGENT_NAMES]
 
@@ -50,14 +55,21 @@ class Settings(BaseSettings):
     llm_base_url: str = Field(default="", alias="LLM_BASE_URL")
     llm_model: str = Field(default="", alias="LLM_MODEL")
     llm_max_tokens: int = Field(default=262144, ge=1, alias="LLM_MAX_TOKENS")
+    # 采样温度，作用于所有 Agent 的 LLM 请求；可按角色用 {ROLE}_LLM_TEMPERATURE 覆盖
+    llm_temperature: float = Field(default=0.1, ge=0, le=2, alias="LLM_TEMPERATURE")
 
     supervisor_llm_api_key: str = _agent_field("supervisor", "api_key")
     supervisor_llm_base_url: str = _agent_field("supervisor", "base_url")
     supervisor_llm_model: str = _agent_field("supervisor", "model")
     supervisor_llm_max_tokens: int = _agent_max_tokens_field("supervisor")
+    supervisor_llm_temperature: float = _agent_temperature_field("supervisor")
     # LLM 单次请求超时（秒），作用于所有 Agent 的 LLM 客户端。
     # 需小于 nginx proxy_read_timeout（600s），否则网关会先断连。
     llm_timeout_seconds: float = Field(default=600, alias="LLM_TIMEOUT_SECONDS")
+    # openai SDK 层重试次数。SDK 对 429（并发/限流）会自动重试，默认值 3 会把
+    # 1 次逻辑调用放大成最多 4 次实际请求、加剧限流；显式压低，限流错误快速
+    # 失败交由上层错峰。
+    llm_max_retries: int = Field(default=1, ge=0, alias="LLM_MAX_RETRIES")
     # 是否校验大模型端点 SSL 证书。openjiuwen develop 版要求 verify_ssl=True 时
     # 必须提供 ssl_cert 文件路径，否则建 client 直接报错；内网/自签端点默认关闭。
     llm_verify_ssl: bool = Field(default=False, alias="LLM_VERIFY_SSL")
@@ -66,21 +78,25 @@ class Settings(BaseSettings):
     data_analysis_llm_base_url: str = _agent_field("data_analysis", "base_url")
     data_analysis_llm_model: str = _agent_field("data_analysis", "model")
     data_analysis_llm_max_tokens: int = _agent_max_tokens_field("data_analysis")
+    data_analysis_llm_temperature: float = _agent_temperature_field("data_analysis")
 
     report_generation_llm_api_key: str = _agent_field("report_generation", "api_key")
     report_generation_llm_base_url: str = _agent_field("report_generation", "base_url")
     report_generation_llm_model: str = _agent_field("report_generation", "model")
     report_generation_llm_max_tokens: int = _agent_max_tokens_field("report_generation")
+    report_generation_llm_temperature: float = _agent_temperature_field("report_generation")
 
     report_validation_llm_api_key: str = _agent_field("report_validation", "api_key")
     report_validation_llm_base_url: str = _agent_field("report_validation", "base_url")
     report_validation_llm_model: str = _agent_field("report_validation", "model")
     report_validation_llm_max_tokens: int = _agent_max_tokens_field("report_validation")
+    report_validation_llm_temperature: float = _agent_temperature_field("report_validation")
 
     finalize_llm_api_key: str = _agent_field("finalize", "api_key")
     finalize_llm_base_url: str = _agent_field("finalize", "base_url")
     finalize_llm_model: str = _agent_field("finalize", "model")
     finalize_llm_max_tokens: int = _agent_max_tokens_field("finalize")
+    finalize_llm_temperature: float = _agent_temperature_field("finalize")
     # 每次调用为模型输出预留的默认空间。
     llm_output_token_reserve: int = Field(
         default=16384,
@@ -94,16 +110,19 @@ class Settings(BaseSettings):
     agent_v2_main_llm_base_url: str = _agent_field("agent_v2_main", "base_url")
     agent_v2_main_llm_model: str = _agent_field("agent_v2_main", "model")
     agent_v2_main_llm_max_tokens: int = _agent_max_tokens_field("agent_v2_main")
+    agent_v2_main_llm_temperature: float = _agent_temperature_field("agent_v2_main")
     # 轻量模型（短确认/闲聊）
     agent_v2_cheap_llm_api_key: str = _agent_field("agent_v2_cheap", "api_key")
     agent_v2_cheap_llm_base_url: str = _agent_field("agent_v2_cheap", "base_url")
     agent_v2_cheap_llm_model: str = _agent_field("agent_v2_cheap", "model")
     agent_v2_cheap_llm_max_tokens: int = _agent_max_tokens_field("agent_v2_cheap")
+    agent_v2_cheap_llm_temperature: float = _agent_temperature_field("agent_v2_cheap")
     # 降级备选模型（主模型调用异常时使用）
     agent_v2_fallback_llm_api_key: str = _agent_field("agent_v2_fallback", "api_key")
     agent_v2_fallback_llm_base_url: str = _agent_field("agent_v2_fallback", "base_url")
     agent_v2_fallback_llm_model: str = _agent_field("agent_v2_fallback", "model")
     agent_v2_fallback_llm_max_tokens: int = _agent_max_tokens_field("agent_v2_fallback")
+    agent_v2_fallback_llm_temperature: float = _agent_temperature_field("agent_v2_fallback")
     # agent_v2 历史摘要触发阈值（tokens，预留）
     agent_v2_summary_max_tokens: int = Field(default=120000, alias="AGENT_V2_SUMMARY_MAX_TOKENS")
     agent_v2_recursion_limit: int = Field(
@@ -117,6 +136,12 @@ class Settings(BaseSettings):
         default=50,
         ge=1,
         alias="AGENT_V3_MAX_ITERATIONS",
+    )
+    # 单次运行允许的工具调用总次数（ToolCallLimitRail 熔断阈值）
+    agent_v3_max_tool_calls_per_run: int = Field(
+        default=8,
+        ge=1,
+        alias="AGENT_V3_MAX_TOOL_CALLS_PER_RUN",
     )
     # v3 持久化 checkpointer 的 SQLite 文件（与 v2 的 data/checkpoints.db 物理隔离）；
     # 后续迁 MySQL 时改走 conf.db_client 通道，本项失效

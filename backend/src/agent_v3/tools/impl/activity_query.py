@@ -18,7 +18,7 @@ from src.agent_v3.tools.impl.common import (
 )
 from src.services.marketing_api_service import fetch_activity_list
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _MAX_ACTIVITIES = 50
 

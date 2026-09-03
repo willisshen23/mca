@@ -111,11 +111,11 @@ async def test_interaction_to_approval_and_pending():
 
 async def test_custom_tool_progress_and_state_update():
     frames = await _collect([
-        _custom({"njbank": "tool_progress", "tool": "search_activities",
+        _custom({"activity-analysis": "tool_progress", "tool": "search_activities",
                  "status": "running", "args_summary": {"keyword": "贷款"}}),
-        _custom({"njbank": "tool_progress", "tool": "search_activities",
+        _custom({"activity-analysis": "tool_progress", "tool": "search_activities",
                  "status": "done", "summary": "3 条"}),
-        _custom({"njbank": "state_update", "data": {"activity_list": [{"activity_id": "A1"}]}}),
+        _custom({"activity-analysis": "state_update", "data": {"activity_list": [{"activity_id": "A1"}]}}),
         _custom({"step": "marketing_report_synthesis", "status": "running"}),
         _out("answer", {"output": "ok", "result_type": "answer"}),
     ])

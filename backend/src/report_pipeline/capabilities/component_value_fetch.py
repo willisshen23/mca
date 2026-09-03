@@ -13,7 +13,7 @@ from src.services.system_prompt_service import format_runtime_prompt
 from src.domain.report.template_skill import unique_ordered
 from src.services.marketing_api_service import fetch_component_values
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def component_value_fetch_node(state: AgentState) -> dict:
@@ -81,7 +81,7 @@ async def component_value_fetch_node(state: AgentState) -> dict:
 
 
 async def _build_component_params(match_result: dict, intent: dict, activities: list[dict]) -> dict:
-    model = get_model("data_analysis", temperature=0.1)
+    model = get_model("data_analysis")
     response = await model.invoke(
         format_runtime_prompt(
             "component_value_param",

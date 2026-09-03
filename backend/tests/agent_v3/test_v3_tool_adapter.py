@@ -181,7 +181,7 @@ async def test_state_updates_dropped_with_warning_when_no_session(monkeypatch, c
         return ToolOutcome("content", {"analysis_queue": []})
 
     monkeypatch.setattr(impl_analysis_queue, "remove_from_analysis_queue", fake_impl)
-    with caplog.at_level(logging.WARNING, logger="njbank.agent"):
+    with caplog.at_level(logging.WARNING, logger="activity-analysis.agent"):
         result = await v3_tools.remove_from_analysis_queue._func(activity_ids=["A1"])
 
     assert result == "content"

@@ -34,7 +34,7 @@ async def scenario_stream_chat():
     agent = build_agent()
     chunks = []
     async for chunk in Runner.run_agent_streaming(
-            agent, {"query": "用两句话介绍南京银行的数字化转型。"}, session="spike-stream-chat"):
+            agent, {"query": "用两句话介绍的数字化转型。"}, session="spike-stream-chat"):
         chunks.append(chunk)
     types = [getattr(c, "type", type(c).__name__) for c in chunks]
     from collections import Counter

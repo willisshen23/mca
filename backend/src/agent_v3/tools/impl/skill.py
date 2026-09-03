@@ -13,7 +13,7 @@ from src.agent_v3.tools.impl.common import error_content, ok_content, summarize
 from src.infrastructure.db.session import SessionLocal
 from src.services.skill_service import list_skills, serialize_skill
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def _list_agent_skills(category: str = "", keyword: str = "") -> list[dict]:

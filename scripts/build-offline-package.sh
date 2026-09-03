@@ -12,7 +12,7 @@ PYTHON_ARCHIVE_NAME="cpython-3.12.13-x86_64-linux-gnu.tar.gz"
 PYTHON_ARCHIVE_URL="${PYTHON_ARCHIVE_URL:-https://github.com/astral-sh/python-build-standalone/releases/download/20260623/cpython-3.12.13%2B20260623-x86_64-unknown-linux-gnu-install_only.tar.gz}"
 PACKAGE_NAME="${PACKAGE_NAME:-activity-analysis-assistant-offline-$(date +%Y%m%d-%H%M%S).tar.gz}"
 PACKAGE_PATH="$ROOT_DIR/$PACKAGE_NAME"
-BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/njbank-offline-build.XXXXXX")"
+BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/activity-analysis-offline-build.XXXXXX")"
 STAGE_DIR="$BUILD_ROOT/activity-analysis-assistant"
 BUILD_VENV="$BUILD_ROOT/build-venv"
 

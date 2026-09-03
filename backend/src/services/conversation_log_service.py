@@ -13,7 +13,7 @@ from src.services.agent_run_history_service import (
     _serialize_datetime,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _RESPONSE_SUMMARY_LIMIT = 160
 

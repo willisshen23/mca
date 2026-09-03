@@ -12,7 +12,7 @@ from src.agent_v3.tools.impl import ToolContext
 from src.agent_v3.tools.impl.common import error_content, ok_content, summarize
 from src.services.activity_template_service import list_agent_activity_templates
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def get_available_templates(ctx: ToolContext, template_type: str = "", keyword: str = "") -> str:

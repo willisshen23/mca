@@ -19,7 +19,7 @@ from src.services.activity_template_service import (
 )
 from src.services.skill_service import record_skill_component_usage
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter(prefix="/activity-templates")
 

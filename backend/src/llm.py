@@ -35,7 +35,7 @@ from src.utils.token_budget import (
     is_provider_context_limit_error,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _model_cache: dict[str, "GuardedModel"] = {}
 
@@ -222,7 +222,13 @@ class GuardedModel:
             logger.exception("[LLM] 调用统计写入失败 run=%s", run_id[:8])
 
 
-def get_model(role: str = "report_generation", temperature: float = 0.1,
+def resolve_temperature(settings, role: str) -> float:
+    """角色温度解析：{ROLE}_LLM_TEMPERATURE（>=0 视为已配置）优先，回退全局 LLM_TEMPERATURE。"""
+    role_temp = float(getattr(settings, f"{role}_llm_temperature", -1.0))
+    return role_temp if role_temp >= 0 else float(getattr(settings, "llm_temperature", 0.1))
+
+
+def get_model(role: str = "report_generation", temperature: float | None = None,
               use_cache: bool = True) -> GuardedModel:
     settings = get_settings()
     api_key = getattr(settings, f"{role}_llm_api_key", "") or settings.llm_api_key
@@ -230,6 +236,9 @@ def get_model(role: str = "report_generation", temperature: float = 0.1,
     model = getattr(settings, f"{role}_llm_model", "") or settings.llm_model
     role_model = getattr(settings, f"{role}_llm_model", "")
     context_limit = int(getattr(settings, f"{role}_llm_max_tokens", 0) or settings.llm_max_tokens) if role_model else int(settings.llm_max_tokens)
+    # 显式传参优先（个别调用点需要偏离配置时仍可用），缺省走配置文件
+    if temperature is None:
+        temperature = resolve_temperature(settings, role)
 
     cache_key = f"{role}:{temperature}"
     if use_cache and cache_key in _model_cache:
@@ -239,6 +248,8 @@ def get_model(role: str = "report_generation", temperature: float = 0.1,
         client_provider="OpenAI", api_key=api_key, api_base=base_url,
         # 仅首次建连生效（共享客户端缓存键不含 timeout）；逐请求超时走 invoke(timeout=...)
         timeout=settings.llm_timeout_seconds,
+        # SDK 默认 3 次重试会把 429 限流放大成最多 4 倍实际请求，显式压低
+        max_retries=settings.llm_max_retries,
         verify_ssl=settings.llm_verify_ssl,
     )
     request_cfg = ModelRequestConfig(model_name=model, temperature=temperature)

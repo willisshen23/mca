@@ -6,7 +6,7 @@ from typing import Any
 from src.report_pipeline.state import AgentState
 from src.services.uploaded_file_service import read_uploaded_activity_records
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 ACTIVITY_ID_KEYS = ("activity_id", "act_no", "actNo", "活动编号", "活动ID", "活动id")
 ACTIVITY_NAME_KEYS = ("activity_name", "name", "act_name", "actName", "活动名称", "活动")

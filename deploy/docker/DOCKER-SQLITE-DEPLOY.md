@@ -159,7 +159,7 @@ bash deploy/docker/docker-deploy.sh status
 
 ```bash
 cd deploy/docker
-docker-compose -p njbank-activity-analysis -f docker-compose.yml logs -f mock
+docker-compose -p activity-analysis -f docker-compose.yml logs -f mock
 ```
 
 ## 五、SQLite 数据与备份

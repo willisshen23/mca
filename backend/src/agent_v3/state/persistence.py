@@ -25,7 +25,7 @@ from openjiuwen.core.session.checkpointer.checkpointer import CheckpointerConfig
 
 from src.config import get_settings, resolve_path
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _SQLITE_LOCK_TIMEOUT_S = 5
 

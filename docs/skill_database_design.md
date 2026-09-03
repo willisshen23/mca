@@ -13,7 +13,7 @@ BUSINESS_DATABASE_URL=sqlite:///data/skills.db
 MySQL 示例：
 
 ```env
-BUSINESS_DATABASE_URL=mysql+pymysql://user:password@host:3306/njbank?charset=utf8mb4
+BUSINESS_DATABASE_URL=mysql+pymysql://user:password@host:3306/activity-analysis?charset=utf8mb4
 ```
 
 ## 表结构

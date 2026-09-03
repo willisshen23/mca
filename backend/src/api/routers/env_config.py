@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from src.api.schemas import EnvConfigUpdate
 from src.services.env_config_service import _read_env_values, get_env_config, update_env_config, update_env_config_content
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter(prefix="/env-config")
 _restart_lock = threading.Lock()

@@ -26,7 +26,7 @@ from src.infrastructure.db.session import SessionLocal, engine
 from src.domain.report.html_template import strip_report_footer_note
 from src.services.report_export_service import prepare_report_html_for_download
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _MISSING: Any = object()
 

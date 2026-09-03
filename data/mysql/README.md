@@ -75,7 +75,7 @@ data/mysql/auto_migrations/20260730_001_add_model_name.sql
 ```env
 DATABASE_HOST=127.0.0.1
 DATABASE_PORT=3306
-DATABASE_USERNAME=njbank
+DATABASE_USERNAME=activity-analysis
 DATABASE_PASSWORD="your_password"
 DATABASE_NAME=njbank_aa
 ```

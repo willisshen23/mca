@@ -11,7 +11,7 @@ from src.infrastructure.db.models import Base, Skill, SkillCategory, SkillUsageL
 from src.infrastructure.db.seed import seed_default_skills
 from src.infrastructure.db.session import SessionLocal, engine
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def ensure_skill_database() -> None:

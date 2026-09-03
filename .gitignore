@@ -22,7 +22,7 @@ env/
 # 离线部署包产物 (体积大, 不入库)
 offline-bundle/python/*.tar.gz
 offline-bundle/wheels/*.whl
-njbank-agent-offline-*.tar.gz
+activity-analysis-agent-offline-*.tar.gz
 
 # Environment files
 .env

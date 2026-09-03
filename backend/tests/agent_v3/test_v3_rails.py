@@ -115,7 +115,7 @@ async def test_progress_rail_emits_running_done_and_state():
                                           tool_args={"activity_ids": ["A1"]}))
     await rail.after_tool_call(_tool_ctx("add_to_analysis_queue", session,
                                          tool_result='{"status":"ok"}'))
-    kinds = [f.get("njbank") for f in session.custom_frames]
+    kinds = [f.get("activity-analysis") for f in session.custom_frames]
     assert kinds == ["tool_progress", "tool_progress", "state_update"]
     running, done, state = session.custom_frames
     assert running["status"] == "running" and running["tool"] == "add_to_analysis_queue"
@@ -130,7 +130,7 @@ async def test_progress_rail_suppresses_generate_report():
     rail = ToolProgressRail()
     await rail.before_tool_call(_tool_ctx("generate_report", session))
     await rail.after_tool_call(_tool_ctx("generate_report", session, tool_result="ok"))
-    assert all(f.get("njbank") != "tool_progress" for f in session.custom_frames)
+    assert all(f.get("activity-analysis") != "tool_progress" for f in session.custom_frames)
 
 
 async def test_progress_rail_parses_json_string_tool_args():
@@ -163,7 +163,7 @@ async def test_progress_rail_does_not_reemit_stale_guard_result():
     rail = ToolProgressRail()
     await rail.after_tool_call(_tool_ctx("get_report_content", session,
                                          tool_result='{"status":"ok"}'))
-    state_frames = [f for f in session.custom_frames if f.get("njbank") == "state_update"]
+    state_frames = [f for f in session.custom_frames if f.get("activity-analysis") == "state_update"]
     for frame in state_frames:
         assert "report_html_guard_result" not in frame["data"]
 
@@ -175,6 +175,6 @@ async def test_progress_rail_emits_guard_result_after_report_tools():
     rail = ToolProgressRail()
     await rail.after_tool_call(_tool_ctx("modify_report", session,
                                          tool_result='{"status":"ok"}'))
-    state_frames = [f for f in session.custom_frames if f.get("njbank") == "state_update"]
+    state_frames = [f for f in session.custom_frames if f.get("activity-analysis") == "state_update"]
     assert state_frames
     assert state_frames[0]["data"]["report_html_guard_result"] == {"valid": True}

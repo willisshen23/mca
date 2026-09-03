@@ -5,7 +5,7 @@ from typing import Any
 
 from src.report_pipeline.state import AgentState
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 EMPTY_STRINGS = {"", "none", "null", "undefined", "nan"}
 

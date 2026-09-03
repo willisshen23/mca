@@ -20,7 +20,7 @@ from src.services.skill_service import record_skill_component_usage
 from src.services.system_prompt_service import format_runtime_prompt
 from src.domain.report.template_skill import apply_template_skill_order
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def activity_template_matching_node(state: AgentState) -> dict:
@@ -62,7 +62,7 @@ async def activity_template_matching_node(state: AgentState) -> dict:
         _is_outbound_report_context(state, activities),
     )
     try:
-        model = get_model("report_generation", temperature=0.1)
+        model = get_model("report_generation")
         response = await model.invoke(
             format_runtime_prompt(
                 "activity_template_matching",

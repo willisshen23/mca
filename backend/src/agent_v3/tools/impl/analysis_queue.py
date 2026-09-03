@@ -16,7 +16,7 @@ from src.agent_v3.tools.impl.common import (
     ok_content,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def _now_iso() -> str:

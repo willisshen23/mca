@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from src.infrastructure.db.models import Base, SystemPrompt
 from src.infrastructure.db.session import SessionLocal, engine
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 PUBLISHED = "published"
 PENDING = "pending"

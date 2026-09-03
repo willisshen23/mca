@@ -17,7 +17,7 @@ from src.agent_v3.tools import TOOL_DISPLAY_NAMES
 from src.agent_v3.tools.impl.common import activity_key, activity_name
 from src.agent_v3 import sessions as v3_sessions
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _STREAM_MODES = [BaseStreamMode.OUTPUT, BaseStreamMode.CUSTOM]
 
@@ -146,7 +146,7 @@ async def stream_v3_events(
 
             if isinstance(chunk, CustomSchema):
                 data = chunk.model_dump()
-                marker = data.pop("njbank", None)
+                marker = data.pop("activity-analysis", None)
                 if marker == "tool_progress":
                     tool = str(data.get("tool") or "")
                     status = str(data.get("status") or "")

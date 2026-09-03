@@ -13,7 +13,7 @@ from src.api.schemas import UploadResponse
 from src.config import get_settings, resolve_path
 from src.services.uploaded_file_service import summarize_uploaded_file
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter()
 
@@ -129,7 +129,7 @@ async def download_report_export(file_name: str):
     else:
         import tempfile
 
-        export_dir = Path(tempfile.gettempdir()) / "njbank_exports"
+        export_dir = Path(tempfile.gettempdir()) / "activity-analysis_exports"
 
     file_path = _safe_child_file(export_dir, file_name)
     if not file_path.is_file():

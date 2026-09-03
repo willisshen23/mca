@@ -21,7 +21,7 @@ from src.agent_v3.tools.impl.common import error_content, ok_content
 from src.config import get_settings
 from src.services.report_export_service import write_report_html
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def _safe_filename(value: str) -> str:
@@ -56,7 +56,7 @@ async def export_report(
         from src.config import resolve_path
         out_dir = resolve_path(export_dir)
     else:
-        out_dir = Path(tempfile.gettempdir()) / "njbank_exports"
+        out_dir = Path(tempfile.gettempdir()) / "activity-analysis_exports"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     output_path = str(out_dir / f"{base_name}.{format}")

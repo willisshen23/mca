@@ -9,7 +9,7 @@ from fastapi.responses import PlainTextResponse, FileResponse
 
 from src.config import get_settings
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 router = APIRouter(prefix="/logs")
 
 settings = get_settings()

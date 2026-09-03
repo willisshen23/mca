@@ -12,7 +12,7 @@ import threading
 
 from openjiuwen.core.session.agent import create_agent_session
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _sessions: dict[str, object] = {}
 _pending_interrupts: dict[str, str] = {}

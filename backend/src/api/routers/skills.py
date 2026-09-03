@@ -21,7 +21,7 @@ from src.services.skill_service import (
     update_skill_category,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 router = APIRouter()
 

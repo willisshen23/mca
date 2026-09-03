@@ -34,7 +34,7 @@
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python -c "
 import openpyxl
 wb = openpyxl.load_workbook('mock/外呼活动 mock 数据.xlsx')
@@ -59,7 +59,7 @@ from pathlib import Path
 
 import openpyxl
 
-PATH = Path("/Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/mock/外呼活动 mock 数据.xlsx")
+PATH = Path("/Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/mock/外呼活动 mock 数据.xlsx")
 SRC_ROW = 2
 SRC_ACT_NO = "ACT20260116906568"
 NEW_ACTS = [
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python /tmp/add_mock_activities.py
 python -c "
 import sys; sys.path.insert(0, 'mock')
@@ -132,7 +132,7 @@ Expected: 3 条记录，act_no 分别为 568/569/570，act_name 带 B/C 后缀�
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 git add "mock/外呼活动 mock 数据.xlsx"
 git commit -m "mock：外呼活动数据补充 2 条活动，支撑多活动场景
 
@@ -270,7 +270,7 @@ def test_real_excel_supports_multi_activity():
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python -m pytest mock/tests/test_outbound_api2_router.py -v
 ```
 Expected: FAIL（`_split_act_nos` / `_extract_act_nos` / `get_activities_by_ids` 不存在）。
@@ -412,7 +412,7 @@ def _build_rows_for_record(api_key: str | None, record: dict[str, Any] | None) -
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python -m pytest mock/tests/test_outbound_api2_router.py -v
 ```
 Expected: 10 passed。
@@ -420,7 +420,7 @@ Expected: 10 passed。
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 git add mock/tests/test_outbound_api2_router.py mock/outbound_api2_router.py mock/waihu_data_service.py
 git commit -m "mock：外呼活动查询支持 edw_act_no 多值解析与多活动合并返回
 
@@ -534,7 +534,7 @@ def test_empty_act_no_returns_error():
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests/infrastructure/test_outbound_client.py -v
 ```
 Expected: FAIL（`_extract_outbound_act_nos` 不存在 / `matched_act_nos` 断言失败）。
@@ -670,7 +670,7 @@ Expected: FAIL（`_extract_outbound_act_nos` 不存在 / `matched_act_nos` 断�
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests/infrastructure/test_outbound_client.py -v
 ```
 Expected: 8 passed。
@@ -679,7 +679,7 @@ Expected: 8 passed。
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests -q
 ```
 Expected: 全量通过（`tests/agent_v2/test_outbound_perspective.py` 在 Task 4 才改，若此处有个别失败且失败原因确为"合并调用尚未实现"，记录后在 Task 4 修复；其余失败必须解决）。
@@ -687,7 +687,7 @@ Expected: 全量通过（`tests/agent_v2/test_outbound_perspective.py` 在 Task 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 git add backend/src/infrastructure/integrations/bank_marketing/client.py backend/tests/infrastructure/
 git commit -m "client：外呼活动查询支持多活动 edw_act_no 拼接与 matched_act_nos 聚合
 
@@ -844,7 +844,7 @@ def test_merged_probe_exception_falls_back_to_individual(monkeypatch):
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests/agent_v2/test_outbound_perspective.py -v
 ```
 Expected: 多数 FAIL（合并调用/拆分/回退未实现；逐活动逻辑会把 list 当 key 导致行为不符）。
@@ -971,7 +971,7 @@ async def _probe_outbound_activities_individually(activities: list[dict], ctx) -
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests/agent_v2/test_outbound_perspective.py -v
 ```
 Expected: 全部 passed（含新增异常回退用例与两个改造后的 error 用例）。
@@ -980,7 +980,7 @@ Expected: 全部 passed（含新增异常回退用例与两个改造后的 error
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests/agent_v2 -q
 ```
 Expected: 全部通过。
@@ -988,7 +988,7 @@ Expected: 全部通过。
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 git add backend/src/agent_v2/tools/report_gen.py backend/tests/agent_v2/test_outbound_perspective.py
 git commit -m "agent：外呼视角探测改为多活动合并调用，失败回退逐活动探测
 
@@ -1009,7 +1009,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis/backend
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis/backend
 python -m pytest tests -q
 ruff check src/infrastructure/integrations/bank_marketing/client.py src/agent_v2/tools/report_gen.py tests/infrastructure/test_outbound_client.py tests/agent_v2/test_outbound_perspective.py
 ```
@@ -1019,7 +1019,7 @@ Expected: 测试全通过；ruff 无告警（ruff 未安装则跳过并注明）
 
 Run:
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python -m pytest mock/tests -q
 ```
 Expected: 10 passed。
@@ -1029,7 +1029,7 @@ Expected: 10 passed。
 启动 mock 服务并用 curl 验证多值查询：
 
 ```bash
-cd /Users/lihongjun/Desktop/NJ_BANK/Marketing_Campaign_Analysis/njbank_Marketing_Campaign_Analysis
+cd /Users/lihongjun/Desktop/Projects/Marketing_Campaign_Analysis/activity-analysis
 python -m uvicorn mock.app:app --port 8005 &
 sleep 3
 curl -s -X POST "http://localhost:8005/api2/dataservice/query/EDW_RTL_MED_ACTIVITY_BASE_INFO" \

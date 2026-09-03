@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.infrastructure.converters.format_converter import convert_html
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 def convert_report_html(html: str, target_format: str, output_path: str) -> str:

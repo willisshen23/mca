@@ -12,7 +12,7 @@ from src.report_pipeline.prompts.marketing_workflow import TEMPLATE_MATCHING_PRO
 from src.services.system_prompt_service import format_runtime_prompt
 from src.domain.report.template_skill import apply_template_skill_order, unique_ordered
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def template_matching_node(state: AgentState) -> dict:
@@ -27,7 +27,7 @@ async def template_matching_node(state: AgentState) -> dict:
 
     t0 = time.monotonic()
     logger.info("Agent1数据模板匹配开")
-    model = get_model("report_generation", temperature=0.1)
+    model = get_model("report_generation")
     response = await model.invoke(
         format_runtime_prompt(
             "template_matching",

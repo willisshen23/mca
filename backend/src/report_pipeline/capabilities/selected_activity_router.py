@@ -4,7 +4,7 @@ import logging
 
 from src.report_pipeline.state import AgentState
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def selected_activity_router_node(state: AgentState) -> dict:

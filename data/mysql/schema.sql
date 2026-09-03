@@ -1,4 +1,4 @@
--- MySQL 8.0+ business database schema for njbank Marketing Campaign Analysis.
+-- MySQL 8.0+ business database schema for activity-analysis Marketing Campaign Analysis.
 -- Select the target database before running this script. The script does not
 -- create or drop a database and can be run repeatedly.
 -- 创建库名

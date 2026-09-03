@@ -56,7 +56,7 @@
 ## 项目结构
 
 ```
-njbank_Marketing_Campaign_Analysis/
+activity-analysis/
 ├── README.md
 ├── DEPLOY.md                          # 部署指南（含离线部署）
 ├── DEPLOY-OFFLINE-KYLIN.md            # 麒麟系统离线部署手册

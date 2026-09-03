@@ -6,7 +6,7 @@ from typing import Callable
 
 from src.infrastructure.integrations.bank_marketing import ApiResult, BankMarketingApiClient
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _client = BankMarketingApiClient()
 

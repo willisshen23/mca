@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  mock:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: mock-runtime
+    image: activity-analysis-mock:latest
+    container_name: activity-analysis-mock
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+    expose:
+      - "8005"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8005/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: runtime
+    image: activity-analysis:latest
+    container_name: activity-analysis
+    restart: unless-stopped
+    depends_on:
+      - mock
+    env_file:
+      - ../../backend/.env
+    environment:
+      # Docker 部署固定使用 SQLite，不读取可能误填的 MySQL 配置。
+      DATABASE_HOST: ""
+      DATABASE_PORT: ""
+      DATABASE_USERNAME: ""
+      DATABASE_PASSWORD: ""
+      DATABASE_NAME: ""
+      BUSINESS_DATABASE_URL: sqlite:////app/backend/data/skills.db
+      DB_PATH: /app/backend/data/checkpoints.db
+      UPLOAD_DIR: /app/backend/data/uploads
+      OUTPUT_DIR: /app/backend/data/outputs
+      REPORT_EXPORT_DIR: /app/backend/data/outputs/exports
+      LOG_DIR: /app/backend/data/logs
+      HOST: 0.0.0.0
+      PORT: "8000"
+      # LLM API Key 密文解密主密钥（可选）：backend/.env 含 enc:v1: 密文时必须提供。
+      # 由宿主机环境变量注入（勿写入 backend/.env 与密文同文件）；
+      # 未设置时若配置为密文，应用启动会 fail-fast 报 MasterKeyMissingError。
+      LLM_MASTER_KEY: "${LLM_MASTER_KEY:-}"
+    ports:
+      - "${PORT:-9111}:8000"
+    volumes:
+      - ./runtime-data:/app/backend/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

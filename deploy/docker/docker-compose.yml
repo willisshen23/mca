@@ -6,8 +6,8 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: mock-runtime
-    image: njbank-activity-analysis-mock:latest
-    container_name: njbank-activity-analysis-mock
+    image: activity-analysis-mock:latest
+    container_name: activity-analysis-mock
     restart: unless-stopped
     environment:
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
@@ -29,8 +29,8 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: runtime
-    image: njbank-activity-analysis:latest
-    container_name: njbank-activity-analysis
+    image: activity-analysis:latest
+    container_name: activity-analysis
     restart: unless-stopped
     depends_on:
       - mock

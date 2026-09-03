@@ -478,7 +478,7 @@ from openjiuwen.core.session import get_current_session
 from src.agent_v2.state.request_context import get_request_context
 from src.agent_v2.tools import activity_query as v2_activity_query
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 #: v2 工具经 resolve_state(runtime) 可能读取的 state 键全集（会话状态部分）
 _SESSION_STATE_KEYS = (
@@ -814,7 +814,7 @@ from openjiuwen.harness.rails.interrupt.interrupt_base import (
     BaseInterruptRail, InterruptDecision,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 #: resume payload 的 JSON Schema（随中断帧透传给前端/调用方，自描述用）
 APPROVAL_PAYLOAD_SCHEMA = {
@@ -894,8 +894,8 @@ git commit -m "feat(agent_v3): ApprovalEditRail 审批三决策（approve/edit/r
 - Produces（Task 7/8 依赖）:
   - `class ToolCallLimitRail(AgentRail)` — `__init__(self, max_calls: int = 8)`；`before_invoke` 重置计数；`before_tool_call` 计数，超过 max_calls 时设 `ctx.extra["_skip_tool"]=True` + `ctx.inputs.tool_result` + `ctx.inputs.tool_msg`，文案含"不要再调用"。
   - `class ToolProgressRail(AgentRail)` — `__init__(self, suppressed_tools: frozenset = frozenset({"generate_report"}), safe_state_keys: tuple = ("analysis_queue", "activity_list", "report_context", "report_html_guard_result", "formatted_output_path"))`。
-    - `before_tool_call`：非抑制工具 → `await ctx.session.write_custom_stream({"njbank": "tool_progress", "tool": <name>, "status": "running", "args_summary": <dict>})`
-    - `after_tool_call`：非抑制工具 → 发 `{"njbank": "tool_progress", ..., "status": "done", "summary": <截断120字>}`；随后读 `ctx.session.get_state(key)` 收集 safe_state_keys 中非空值发 `{"njbank": "state_update", "data": {...}}`（report_context 须剥 `data_snapshot`）。
+    - `before_tool_call`：非抑制工具 → `await ctx.session.write_custom_stream({"activity-analysis": "tool_progress", "tool": <name>, "status": "running", "args_summary": <dict>})`
+    - `after_tool_call`：非抑制工具 → 发 `{"activity-analysis": "tool_progress", ..., "status": "done", "summary": <截断120字>}`；随后读 `ctx.session.get_state(key)` 收集 safe_state_keys 中非空值发 `{"activity-analysis": "state_update", "data": {...}}`（report_context 须剥 `data_snapshot`）。
     - args_summary/summary 的截断规则照抄 v2 sse_bridge `_args_summary`（60 字）/`_summarize_content`（120 字）语义。
 
 - [ ] **Step 1: 写失败测试**
@@ -974,7 +974,7 @@ async def test_progress_rail_emits_running_done_and_state():
                                           tool_args={"activity_ids": ["A1"]}))
     await rail.after_tool_call(_tool_ctx("add_to_analysis_queue", session,
                                          tool_result='{"status":"ok"}'))
-    kinds = [f.get("njbank") for f in session.custom_frames]
+    kinds = [f.get("activity-analysis") for f in session.custom_frames]
     assert kinds == ["tool_progress", "tool_progress", "state_update"]
     running, done, state = session.custom_frames
     assert running["status"] == "running" and running["tool"] == "add_to_analysis_queue"
@@ -989,7 +989,7 @@ async def test_progress_rail_suppresses_generate_report():
     rail = ToolProgressRail()
     await rail.before_tool_call(_tool_ctx("generate_report", session))
     await rail.after_tool_call(_tool_ctx("generate_report", session, tool_result="ok"))
-    assert all(f.get("njbank") != "tool_progress" for f in session.custom_frames)
+    assert all(f.get("activity-analysis") != "tool_progress" for f in session.custom_frames)
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
@@ -1052,7 +1052,7 @@ class ToolProgressRail(AgentRail):
         if ctx.inputs.tool_name in self._suppressed or ctx.session is None:
             return
         await ctx.session.write_custom_stream({
-            "njbank": "tool_progress",
+            "activity-analysis": "tool_progress",
             "tool": ctx.inputs.tool_name,
             "status": "running",
             "args_summary": _args_summary(ctx.inputs.tool_args),
@@ -1063,7 +1063,7 @@ class ToolProgressRail(AgentRail):
             return
         if ctx.inputs.tool_name not in self._suppressed:
             await ctx.session.write_custom_stream({
-                "njbank": "tool_progress",
+                "activity-analysis": "tool_progress",
                 "tool": ctx.inputs.tool_name,
                 "status": "done",
                 "summary": _summarize_content(ctx.inputs.tool_result),
@@ -1076,7 +1076,7 @@ class ToolProgressRail(AgentRail):
         if "report_context" in data:
             data["report_context"] = _compact_report_context(data["report_context"])
         if data:
-            await ctx.session.write_custom_stream({"njbank": "state_update", "data": data})
+            await ctx.session.write_custom_stream({"activity-analysis": "state_update", "data": data})
 ```
 
 注意：`_args_summary`/`_summarize_content`/`_compact_report_context` 在 v2 sse_bridge 中是下划线私有函数——import 私有名跨包使用在本项目属于刻意复用（避免双份漂移），在文件 docstring 注明这一点。
@@ -1199,7 +1199,7 @@ from src.agent_v3.rails import ApprovalEditRail, ToolCallLimitRail, ToolProgress
 from src.agent_v3.tools import ALL_V3_TOOLS
 from src.config import get_settings
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _MAX_TOOL_CALLS_PER_RUN = 8
 
@@ -1264,8 +1264,8 @@ async def get_v3_agent() -> ReActAgent:
             max_iterations=settings.agent_v3_max_iterations,
         )
         agent = ReActAgent(card=AgentCard(
-            id="njbank-marketing-agent-v3",
-            description="南京银行营销分析助手 v3",
+            id="activity-analysis-marketing-agent-v3",
+            description="营销分析助手 v3",
         )).configure(config)
         for t in ALL_V3_TOOLS:
             Runner.resource_mgr.add_tool(t)
@@ -1323,8 +1323,8 @@ git commit -m "feat(agent_v3): ReActAgent 单例组装与 report_gen writer 桥�
 | `OutputSchema type=llm_reasoning` / `llm_usage` / `tracer_*` | 忽略 |
 | `OutputSchema type=answer` | 记 `payload["output"]` 为最终答案（优先于累计值）；循环结束后发 done 帧 |
 | `OutputSchema type=__interaction__` | approval_required 帧 + `set_pending_interrupt(thread_id, payload.id)` |
-| `CustomSchema {"njbank": "tool_progress", ...}` | `tool_progress_frame(tool, status, summary, args_summary)` |
-| `CustomSchema {"njbank": "state_update", "data": {...}}` | `frame("node_update", data)`；其中 `formatted_output_path`→export_artifact 转换逻辑照 v2（见下） |
+| `CustomSchema {"activity-analysis": "tool_progress", ...}` | `tool_progress_frame(tool, status, summary, args_summary)` |
+| `CustomSchema {"activity-analysis": "state_update", "data": {...}}` | `frame("node_update", data)`；其中 `formatted_output_path`→export_artifact 转换逻辑照 v2（见下） |
 | `CustomSchema {"step": ..., "status": ...}` | `pipeline_step_frame(step, status)`（generate_report 管线进度） |
 | `is_cancelled()` 为真 | `cancelled` 帧并 return |
 
@@ -1434,11 +1434,11 @@ async def test_interaction_to_approval_and_pending():
 
 async def test_custom_tool_progress_and_state_update():
     frames = await _collect([
-        _custom({"njbank": "tool_progress", "tool": "search_activities",
+        _custom({"activity-analysis": "tool_progress", "tool": "search_activities",
                  "status": "running", "args_summary": {"keyword": "贷款"}}),
-        _custom({"njbank": "tool_progress", "tool": "search_activities",
+        _custom({"activity-analysis": "tool_progress", "tool": "search_activities",
                  "status": "done", "summary": "3 条"}),
-        _custom({"njbank": "state_update", "data": {"activity_list": [{"activity_id": "A1"}]}}),
+        _custom({"activity-analysis": "state_update", "data": {"activity_list": [{"activity_id": "A1"}]}}),
         _custom({"step": "marketing_report_synthesis", "status": "running"}),
         _out("answer", {"output": "ok", "result_type": "answer"}),
     ])
@@ -1512,7 +1512,7 @@ from src.agent_v2.tools import TOOL_DISPLAY_NAMES
 from src.agent_v2.tools._common import activity_key, activity_name
 from src.agent_v3 import sessions as v3_sessions
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 _STREAM_MODES = [BaseStreamMode.OUTPUT, BaseStreamMode.CUSTOM]
 
@@ -1593,7 +1593,7 @@ async def stream_v3_events(
 
         if isinstance(chunk, CustomSchema):
             data = chunk.model_dump()
-            marker = data.pop("njbank", None)
+            marker = data.pop("activity-analysis", None)
             if marker == "tool_progress":
                 tool = str(data.get("tool") or "")
                 status = str(data.get("status") or "")
@@ -1661,7 +1661,7 @@ async def stream_v3_events(
 
 注意：
 - v2 的 `_export_artifact`/`_compact_report_context`/`_frame`/`tool_progress_frame`/`pipeline_step_frame` 均为模块级纯函数，直接 import 复用（跨包私有名复用是有意为之，防双份漂移）。
-- `CustomSchema` 是 extra="allow" 的 pydantic 模型，`chunk.model_dump()` 拿到原 dict（`step`/`status` 或 `njbank` 标记）。
+- `CustomSchema` 是 extra="allow" 的 pydantic 模型，`chunk.model_dump()` 拿到原 dict（`step`/`status` 或 `activity-analysis` 标记）。
 - `tool_progress_frame` 的 v2 签名是 `(tool, status, summary="", args_summary=None)`，args_summary 为 None 时 v2 实现会跳过该键——核对 v2 源码确认传参兼容。
 
 - [ ] **Step 4: 跑测试确认通过**
@@ -1850,7 +1850,7 @@ from src.agent_v2.state.request_context import (
 )
 from src.services.conversation_log_service import finish_turn, record_turn_start
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 # ── 以下整段从 agent_v2/runtime.py 平移（_BufferedRun/缓冲注册表/取消/帧函数），
 #    逐字拷贝 v2 runtime.py:34-158 的实现，仅改动 docstring 引用 ──

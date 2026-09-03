@@ -13,7 +13,7 @@ from src.agent_v3.tools.impl.common import error_content, ok_content
 from src.report_pipeline.capabilities.activity_file_parse import activity_file_parse_node
 from src.services.uploaded_file_service import summarize_uploaded_file
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def parse_uploaded_data(ctx: ToolContext, confirm: bool = True) -> str | ToolOutcome:

@@ -13,7 +13,7 @@ from typing import Any, Iterator
 
 from src.report_pipeline.state import AgentState
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 DRILLDOWN_THRESHOLD = 0.95
 

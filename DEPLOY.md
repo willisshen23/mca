@@ -72,7 +72,7 @@
 └──────────────────┬───────────────────────────┘
                    │
 ┌──────────────────▼───────────────────────────┐
-│  容器 app（njbank-activity-analysis）          │
+│  容器 app（activity-analysis）          │
 │  FastAPI :8000                                │
 │  ├── /api/*    openJiuwen v3 多智能体          │
 │  ├── /*        前端静态文件（构建期打入镜像）    │
@@ -80,7 +80,7 @@
 └──────────────────┬───────────────────────────┘
                    │ Compose 内部网络 http://mock:8005
 ┌──────────────────▼───────────────────────────┐
-│  容器 mock（njbank-activity-analysis-mock）    │
+│  容器 mock（activity-analysis-mock）    │
 │  银行营销 Mock 接口 :8005（不暴露宿主机端口）    │
 └──────────────────────────────────────────────┘
                    │
@@ -402,8 +402,8 @@ PLATFORM=linux/arm64 bash deploy/docker/build-offline-images.sh
 `/app/backend/seed-data/`）→ 构建两个镜像 → 导出 `offline-dist/*-<架构>.tar.gz`
 及 `MANIFEST.sha256`。也支持分步执行：`snapshot` / `build` / `export`。
 
-- 镜像 tag 与 tar 文件名均带架构后缀（如 `njbank-activity-analysis:latest-arm64`、
-  `njbank-activity-analysis-image-arm64.tar.gz`），两种架构产物互不覆盖；
+- 镜像 tag 与 tar 文件名均带架构后缀（如 `activity-analysis:latest-arm64`、
+  `activity-analysis-image-arm64.tar.gz`），两种架构产物互不覆盖；
 - 构建机与目标机架构不同时走 Docker 自带 binfmt/QEMU 交叉构建（如 x86_64 机构建
   arm64 镜像），速度较慢属正常现象；
 - 镜像内的后端业务代码为**字节码编译后的 .pyc**（Dockerfile 构建期执行
@@ -421,11 +421,11 @@ PLATFORM=linux/arm64 bash deploy/docker/build-offline-images.sh
 ```bash
 # 主应用镜像（x86_64 目标机把 --platform 与 tag 后缀换成 linux/amd64 / -amd64）
 docker build --platform linux/arm64 -f deploy/docker/Dockerfile --target runtime \
-    -t njbank-activity-analysis:latest-arm64 .
+    -t activity-analysis:latest-arm64 .
 
 # Mock 接口镜像（可选，生产直连真实接口可跳过）
 docker build --platform linux/arm64 -f deploy/docker/Dockerfile --target mock-runtime \
-    -t njbank-activity-analysis-mock:latest-arm64 .
+    -t activity-analysis-mock:latest-arm64 .
 ```
 
 > 目标机架构必须与 `--platform` 一致，否则镜像无法在目标机运行；
@@ -434,28 +434,28 @@ docker build --platform linux/arm64 -f deploy/docker/Dockerfile --target mock-ru
 **导出镜像：**
 
 ```bash
-docker save njbank-activity-analysis:latest-arm64 \
-    | gzip > njbank-activity-analysis-image-arm64.tar.gz
+docker save activity-analysis:latest-arm64 \
+    | gzip > activity-analysis-image-arm64.tar.gz
 
-docker save njbank-activity-analysis-mock:latest-arm64 \
-    | gzip > njbank-activity-analysis-mock-image-arm64.tar.gz
+docker save activity-analysis-mock:latest-arm64 \
+    | gzip > activity-analysis-mock-image-arm64.tar.gz
 
 # 生成校验文件
-shasum -a 256 njbank-activity-analysis-image-arm64.tar.gz \
-    > njbank-activity-analysis-image-arm64.tar.gz.sha256
+shasum -a 256 activity-analysis-image-arm64.tar.gz \
+    > activity-analysis-image-arm64.tar.gz.sha256
 ```
 
 **传输并导入（导入后需回标 latest，Compose 引用不带后缀的标签）：**
 
 ```bash
-scp njbank-activity-analysis-image-arm64.tar.gz* user@目标机:/opt/
+scp activity-analysis-image-arm64.tar.gz* user@目标机:/opt/
 ssh user@目标机
 
 cd /opt
-sha256sum -c njbank-activity-analysis-image-arm64.tar.gz.sha256
-gunzip -c njbank-activity-analysis-image-arm64.tar.gz | docker load
-docker tag njbank-activity-analysis:latest-arm64 njbank-activity-analysis:latest
-docker tag njbank-activity-analysis-mock:latest-arm64 njbank-activity-analysis-mock:latest
+sha256sum -c activity-analysis-image-arm64.tar.gz.sha256
+gunzip -c activity-analysis-image-arm64.tar.gz | docker load
+docker tag activity-analysis:latest-arm64 activity-analysis:latest
+docker tag activity-analysis-mock:latest-arm64 activity-analysis-mock:latest
 ```
 
 **目标机启动：**
@@ -477,7 +477,7 @@ bash deploy/docker/docker-deploy.sh up-no-build
 
 ```bash
 docker compose --env-file ../../backend/.env \
-    -p njbank-activity-analysis -f docker-compose.yml up -d
+    -p activity-analysis -f docker-compose.yml up -d
 ```
 
 ### 5.4 Docker 配置要点
@@ -534,6 +534,7 @@ Agent 运行与数据存储：
 |------|------|--------|
 | `AGENT_V2_RECURSION_LIMIT` | LangGraph 单次运行最大步数（防失控循环） | `50` |
 | `AGENT_V3_MAX_ITERATIONS` | v3（openJiuwen）单次运行最大迭代数 | `50` |
+| `AGENT_V3_MAX_TOOL_CALLS_PER_RUN` | v3 单次运行工具调用次数熔断阈值 | `8` |
 | `AGENT_V3_CHECKPOINTER_DB_PATH` | v3 会话状态库路径 | `data/v3_checkpoints.db` |
 | `DB_PATH` | v2 历史会话库路径（**已不读写，可归档**） | `data/checkpoints.db` |
 | `BUSINESS_DATABASE_URL` | 业务库连接串 | `sqlite:///data/skills.db` |
@@ -754,10 +755,10 @@ Compose 通过 `env_file` 把 `backend/.env` 原样注入容器——密文随�
 
 **tar 包 / systemd 部署：**
 
-- 主密钥放独立的 `EnvironmentFile`（权限 600），如 `/etc/njbank/master.env`，
+- 主密钥放独立的 `EnvironmentFile`（权限 600），如 `/etc/activity-analysis/master.env`，
   内容 `LLM_MASTER_KEY=...`；或
-- 密钥文件 `/opt/njbank/keys/master.key`（chmod 600）+ 在 unit 文件中设置
-  `Environment=LLM_MASTER_KEY_FILE=/opt/njbank/keys/master.key`；或
+- 密钥文件 `/opt/activity-analysis/keys/master.key`（chmod 600）+ 在 unit 文件中设置
+  `Environment=LLM_MASTER_KEY_FILE=/opt/activity-analysis/keys/master.key`；或
 - 直接使用默认路径 `backend/data/secrets/master.key`（与应用同机但不同文件，已满足分离要求）；
 - 与 `backend/.env` 物理分离即可。
 
@@ -897,7 +898,7 @@ bash deploy/docker/docker-deploy.sh down
 # 单独查看 Mock 日志
 cd deploy/docker
 docker compose --env-file ../../backend/.env \
-    -p njbank-activity-analysis -f docker-compose.yml logs -f mock
+    -p activity-analysis -f docker-compose.yml logs -f mock
 ```
 
 Windows 将命令替换为 `.\deploy\docker\docker-deploy.ps1 <action>`。
@@ -1019,7 +1020,7 @@ docker info   # 确认 Docker 正常运行
 
 ```bash
 # 进容器手动探测
-docker exec njbank-activity-analysis \
+docker exec activity-analysis \
     python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read())"
 ```
 
@@ -1091,7 +1092,7 @@ cp -r dist ../backend/src/infrastructure/static/
 
 ```bash
 docker build --no-cache -f deploy/docker/Dockerfile \
-    --target runtime -t njbank-activity-analysis:latest .
+    --target runtime -t activity-analysis:latest .
 ```
 
 ### 11.6 Windows 构建脚本报错或行为异常

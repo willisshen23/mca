@@ -242,7 +242,7 @@ def test_pipeline_step_timeout_is_logged_and_propagated(monkeypatch, caplog):
 
     monkeypatch.setattr(rg, "marketing_report_synthesis_node", timeout_synthesis)
 
-    with caplog.at_level(logging.ERROR, logger="njbank.agent"):
+    with caplog.at_level(logging.ERROR, logger="activity-analysis.agent"):
         with pytest.raises(FakeLLMTimeoutError):
             asyncio.run(rg.run_report_pipeline({"request_id": "r-timeout"}))
 
@@ -269,7 +269,7 @@ def test_generate_report_tool_handles_llm_timeout(monkeypatch, caplog):
     monkeypatch.setattr(rg, "validate_report_html", lambda html: _guard_valid())
     monkeypatch.setattr(rg, "save_report_file", lambda request_id, html: ("asset.html", 1))
 
-    with caplog.at_level(logging.ERROR, logger="njbank.agent"):
+    with caplog.at_level(logging.ERROR, logger="activity-analysis.agent"):
         content = asyncio.run(rg.generate_report(ctx))
 
     assert content.startswith("ERROR:")
@@ -297,7 +297,7 @@ def test_generate_report_tool_hides_context_limit_error(monkeypatch, caplog):
 
     monkeypatch.setattr(rg, "run_report_pipeline", context_limit_pipeline)
 
-    with caplog.at_level(logging.ERROR, logger="njbank.agent"):
+    with caplog.at_level(logging.ERROR, logger="activity-analysis.agent"):
         content = asyncio.run(rg.generate_report(ctx))
 
     assert content == "ERROR: 系统正忙，请稍后重试"

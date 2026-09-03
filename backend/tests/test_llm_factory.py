@@ -11,11 +11,27 @@ def _fake_settings(monkeypatch):
         llm_max_tokens=1000, llm_output_token_reserve=100,
         llm_timeout_seconds=600,
         llm_verify_ssl=False,
+        llm_max_retries=1,
         report_generation_llm_api_key="", report_generation_llm_base_url="",
         report_generation_llm_model="", report_generation_llm_max_tokens=0,
     )
     monkeypatch.setattr(llm_mod, "get_settings", lambda: s)
     return s
+
+
+def test_get_model_passes_max_retries_to_client_config(monkeypatch):
+    """SDK 默认 max_retries=3 会把 429 限流放大 4 倍——必须显式透传 LLM_MAX_RETRIES。"""
+    _fake_settings(monkeypatch)
+    seen = {}
+
+    class FakeModel:
+        def __init__(self, client_cfg, request_cfg, *a, **k):
+            seen["client_cfg"] = client_cfg
+
+    monkeypatch.setattr(llm_mod, "Model", FakeModel)
+    llm_mod.reset_model_cache()
+    llm_mod.get_model("report_generation")
+    assert seen["client_cfg"].max_retries == 1
 
 
 def _fake_session(monkeypatch):

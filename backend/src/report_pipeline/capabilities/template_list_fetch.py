@@ -8,7 +8,7 @@ from src.services.activity_template_service import list_agent_activity_templates
 from src.domain.report.template_skill import merge_template_skill_order
 from src.services.marketing_api_service import fetch_data_template_list
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def template_list_fetch_node(state: AgentState) -> dict:

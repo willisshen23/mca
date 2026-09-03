@@ -24,7 +24,7 @@ from src.domain.report.template_skill import (
     unwrap_component_values,
 )
 
-logger = logging.getLogger("njbank.agent")
+logger = logging.getLogger("activity-analysis.agent")
 
 
 async def marketing_report_synthesis_node(state: AgentState) -> dict:
@@ -57,7 +57,7 @@ async def marketing_report_synthesis_node(state: AgentState) -> dict:
     prompt_text += build_report_html_retry_instruction(state)
     create_report_run_history(state)
     update_prompt_text(state.get("request_id", ""), prompt_text)
-    model = get_model("report_generation", temperature=0.1)
+    model = get_model("report_generation")
     logger.debug("Agent2报告生成提示词：%s", prompt_text)
     logger.info("Agent2报告生成提示词准备完 chars=%d", len(prompt_text))
     response = await model.invoke(prompt_text)
