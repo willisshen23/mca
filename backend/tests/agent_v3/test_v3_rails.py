@@ -1,10 +1,12 @@
-"""ToolCallLimitRail / ToolProgressRail 单元测试（假 ctx，不起 agent）。"""
+"""ToolCallLimitRail / ToolProgressRail / UnknownToolGuardRail 单元测试（假 ctx，不起 agent）。"""
 
 from types import SimpleNamespace
 
 import pytest
 
-from src.agent_v3.rails import ToolCallLimitRail, ToolProgressRail
+from src.agent_v3.rails import ToolCallLimitRail, ToolProgressRail, UnknownToolGuardRail
+
+_KNOWN_TOOLS = ("search_activities", "get_available_templates", "generate_report")
 
 
 class _FakeSession:
@@ -178,3 +180,63 @@ async def test_progress_rail_emits_guard_result_after_report_tools():
     state_frames = [f for f in session.custom_frames if f.get("activity-analysis") == "state_update"]
     assert state_frames
     assert state_frames[0]["data"]["report_html_guard_result"] == {"valid": True}
+
+
+# ── UnknownToolGuardRail：幻觉工具拦截 ──
+
+async def test_unknown_tool_guard_skips_unknown_tool():
+    """模型幻觉出不存在的工具（如"匹配分析模板"）：跳过执行并回强纠正消息，
+    避免框架笼统的 Ability not found 让模型反复重试直至打满调用上限。"""
+    rail = UnknownToolGuardRail(known_tools=_KNOWN_TOOLS)
+    ctx = _tool_ctx("匹配分析模板")
+    await rail.before_tool_call(ctx)
+    assert ctx.extra["_skip_tool"] is True
+    assert "匹配分析模板" in ctx.inputs.tool_result
+    assert "不存在" in ctx.inputs.tool_result
+    # 纠正消息必须列出合法工具并引导直接生成报告
+    assert "generate_report" in ctx.inputs.tool_result
+    assert "分析框架" in ctx.inputs.tool_result
+    assert ctx.inputs.tool_msg is not None
+    assert ctx.inputs.tool_msg.tool_call_id == "call-1"
+
+
+async def test_unknown_tool_guard_passes_known_tool():
+    rail = UnknownToolGuardRail(known_tools=_KNOWN_TOOLS)
+    ctx = _tool_ctx("generate_report")
+    await rail.before_tool_call(ctx)
+    assert ctx.extra.get("_skip_tool") is not True
+    assert ctx.inputs.tool_result is None
+    assert ctx.inputs.tool_msg is None
+
+
+async def test_unknown_tool_guard_repeated_unknown_calls_each_get_guidance():
+    """连续幻觉不同名字的工具：每次都被拦截并给纠正消息。"""
+    rail = UnknownToolGuardRail(known_tools=_KNOWN_TOOLS)
+    for name in ("匹配分析模板", "匹配分析SKILL"):
+        ctx = _tool_ctx(name)
+        await rail.before_tool_call(ctx)
+        assert ctx.extra["_skip_tool"] is True
+        assert name in ctx.inputs.tool_result
+
+
+async def test_skipped_unknown_call_does_not_consume_limit_budget():
+    """guard 先于 limit rail 注册时，被拦截的幻觉调用不应消耗工具调用额度：
+    幻觉调用本身未执行，计进去会把 generate_report 的额度挤掉。"""
+    session = _FakeSession(session_id="s-1")
+    guard = UnknownToolGuardRail(known_tools=_KNOWN_TOOLS)
+    limit = ToolCallLimitRail(max_calls=2)
+    await limit.before_invoke(_invoke_ctx(session))
+    # 两次幻觉调用被 guard 拦截
+    for name in ("匹配分析模板", "匹配分析SKILL"):
+        ctx = _tool_ctx(name, session)
+        await guard.before_tool_call(ctx)
+        await limit.before_tool_call(ctx)
+    # 真实工具仍保有全部额度
+    for _ in range(2):
+        ctx = _tool_ctx("generate_report", session)
+        await limit.before_tool_call(ctx)
+        assert ctx.extra.get("_skip_tool") is not True
+    # 第 3 次真实调用才超限
+    ctx = _tool_ctx("generate_report", session)
+    await limit.before_tool_call(ctx)
+    assert ctx.extra["_skip_tool"] is True

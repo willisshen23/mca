@@ -6,6 +6,9 @@ export const REPORT_SESSION_KEY = 'report_page_session';
 // 单次分析最多同时选择的活动数，防止模型上下文超长
 export const MAX_SELECTED_ACTIVITIES = 5;
 
+// 画布默认加载的分析组件（按名称从 SKILL 库中匹配，顺序即画布顺序）
+export const DEFAULT_CANVAS_SKILL_NAMES = ['北极星指标分析', '活动整体概况分析', '多维分析'];
+
 const state = reactive({
   currentType: 'online',
   selectedActivityNames: new Set(),
@@ -98,8 +101,13 @@ export function useAnalysisStore() {
   }
 
   function addCanvasSkill(skill) {
+    if (state.canvasComps.some((item) => item.name === skill.name)) {
+      addS2Message('ai', `「${skill.name}」已在分析框架中，相同组件只能添加一个。`);
+      return false;
+    }
     state.canvasComps.push(cloneSkill(skill));
     addS2Message('ai', `已添加「${skill.name}」至分析框架。`);
+    return true;
   }
 
   function removeCanvasSkill(index) {
@@ -134,7 +142,15 @@ export function useAnalysisStore() {
   }
 
   function setCanvasDefaults(skills) {
-    const defaults = skills.slice(0, 5).map(cloneSkill);
+    const byName = new Map(skills.map((item) => [item.name, item]));
+    let defaults = DEFAULT_CANVAS_SKILL_NAMES
+      .map((name) => byName.get(name))
+      .filter(Boolean)
+      .map(cloneSkill);
+    // 兜底：默认组件在库中均不存在时，沿用原逻辑取前 5 个
+    if (defaults.length === 0) {
+      defaults = skills.slice(0, 5).map(cloneSkill);
+    }
     if (defaults.length === 0) return;
     state.defaultCanvasComps.splice(0, state.defaultCanvasComps.length, ...defaults);
     if (!state.canvasInitializedFromApi) {

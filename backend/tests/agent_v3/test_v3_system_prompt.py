@@ -37,3 +37,34 @@ def test_build_system_prompt_appends_rule_to_db_override(monkeypatch):
     assert "单活动报告默认视角规则" in prompt
     assert SINGLE_ACTIVITY_RULE_FRAGMENT in prompt
 
+
+PRESET_COMPONENTS_RULE_FRAGMENT = "分析框架请包含以下组件"
+KNOWN_TOOLS_RULE_FRAGMENT = "禁止编造或猜测工具名"
+
+
+def test_fallback_prompt_documents_preset_components_rule():
+    """报告页预选组件已自动传入管线，模型不得幻觉"匹配模板/匹配组件"类工具。"""
+    assert PRESET_COMPONENTS_RULE_FRAGMENT in AGENT_V2_SYSTEM_PROMPT
+    assert "这类工具不存在" in AGENT_V2_SYSTEM_PROMPT
+    assert KNOWN_TOOLS_RULE_FRAGMENT in AGENT_V2_SYSTEM_PROMPT
+
+
+def test_build_system_prompt_does_not_duplicate_preset_rules(monkeypatch):
+    monkeypatch.setattr(
+        system_prompt_module, "get_runtime_prompt", lambda key, fallback: fallback
+    )
+    prompt = build_system_prompt()
+    assert prompt.count(PRESET_COMPONENTS_RULE_FRAGMENT) == 1
+    assert prompt.count(KNOWN_TOOLS_RULE_FRAGMENT) == 1
+
+
+def test_build_system_prompt_appends_preset_rules_to_db_override(monkeypatch):
+    """生产 DB 定制 prompt 缺少规则时必须追加——幻觉工具问题正是线上 DB 覆盖场景。"""
+    monkeypatch.setattr(
+        system_prompt_module, "get_runtime_prompt", lambda key, fallback: "你是营销分析助手。"
+    )
+    prompt = build_system_prompt()
+    assert "报告页预选组件路由规则" in prompt
+    assert PRESET_COMPONENTS_RULE_FRAGMENT in prompt
+    assert "工具白名单规则" in prompt
+    assert KNOWN_TOOLS_RULE_FRAGMENT in prompt

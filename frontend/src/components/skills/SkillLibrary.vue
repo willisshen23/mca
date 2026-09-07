@@ -1,11 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { fetchSkills } from '../../api/skills';
+import { useAnalysisStore } from '../../stores/analysisStore';
 
 const emit = defineEmits(['add', 'loaded']);
+const store = useAnalysisStore();
 const skills = ref([]);
 const loading = ref(false);
 const error = ref('');
+
+const addedNames = computed(() => new Set(store.state.canvasComps.map((item) => item.name)));
 
 const groupedSkills = computed(() => {
   const groups = new Map();
@@ -30,10 +34,19 @@ async function loadSkills() {
 }
 
 function dragStart(event, skill) {
+  if (addedNames.value.has(skill.name)) {
+    event.preventDefault();
+    return;
+  }
   const payload = JSON.stringify(skill);
   event.dataTransfer.setData('application/json', payload);
   event.dataTransfer.setData('text/plain', payload);
   event.dataTransfer.effectAllowed = 'copy';
+}
+
+function tryAdd(skill) {
+  if (addedNames.value.has(skill.name)) return;
+  emit('add', skill);
 }
 
 onMounted(loadSkills);
@@ -54,11 +67,15 @@ onMounted(loadSkills);
         v-for="skill in group.skills"
         :key="skill.name"
         class="skcard"
-        draggable="true"
+        :class="{ added: addedNames.has(skill.name) }"
+        :draggable="!addedNames.has(skill.name)"
         @dragstart="dragStart($event, skill)"
-        @dblclick="emit('add', skill)"
+        @dblclick="tryAdd(skill)"
       >
-        <div class="skcn">{{ skill.name }}</div>
+        <div class="skcn">
+          {{ skill.name }}
+          <span v-if="addedNames.has(skill.name)" class="skadded"><i class="ti ti-check"></i> 已添加</span>
+        </div>
         <div class="skcd">{{ skill.desc }} · 已应用 {{ skill.useCnt || 0 }} 次</div>
       </div>
     </div>

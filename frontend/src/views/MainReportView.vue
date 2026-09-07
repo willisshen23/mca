@@ -471,6 +471,9 @@ function retryBoot() {
         <button class="btn" type="button" @click="goBackToCompose">
           <i class="ti ti-arrow-left"></i> 返回调整
         </button>
+        <button class="btn" type="button" @click="goBackToSource">
+          <i class="ti ti-home"></i> 返回首页
+        </button>
         <button class="btn pri" type="button" :disabled="!displayReport" @click="exportReport">
           <i class="ti ti-download"></i> 导出HTML
         </button>

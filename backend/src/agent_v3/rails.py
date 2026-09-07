@@ -128,6 +128,10 @@ class ToolCallLimitRail(AgentRail):
             self._counts[key] = 0
 
     async def before_tool_call(self, ctx) -> None:
+        if ctx.extra.get("_skip_tool"):
+            # 已被更早的 Rail（如 UnknownToolGuardRail）拦截的调用不会真正执行，
+            # 不消耗额度——否则幻觉工具的重试会把 generate_report 的额度挤掉
+            return
         key = self._session_key(ctx)
         if key is None:
             # 无会话标识的调用不纳入限额（不污染其他会话计数）
@@ -145,6 +149,45 @@ class ToolCallLimitRail(AgentRail):
         )
         ctx.inputs.tool_msg = ToolMessage(content=ctx.inputs.tool_result,
                                           tool_call_id=tool_call_id)
+
+
+class UnknownToolGuardRail(AgentRail):
+    """幻觉工具拦截：模型调用未注册的工具名时直接跳过执行并回强纠正消息。
+
+    背景：报告页首条消息含"分析框架请包含以下组件：…"，组件已随请求结构化
+    传入报告管线（report_components），但系统提示词历史上未说明该机制，
+    模型会幻觉出"匹配分析模板/匹配分析SKILL"之类不存在的工具去调用。
+    openjiuwen 对未找到的工具只回笼统的 "Ability not found in resource_mgr"
+    并继续 ReAct 循环，模型换名字反复重试，直至打满 ToolCallLimitRail 上限，
+    generate_report 从未执行、报告生成失败。
+
+    本 Rail 在工具查找之前拦截：跳过执行 + 返回列出合法工具的纠正消息，
+    显式告知组件已自动传入、直接调用 generate_report。被拦截的调用不消耗
+    ToolCallLimitRail 额度（须注册在 ToolCallLimitRail 之前）。
+    """
+
+    def __init__(self, known_tools: Iterable[str]):
+        self._known = frozenset(known_tools)
+
+    async def before_tool_call(self, ctx) -> None:
+        tool_name = getattr(ctx.inputs, "tool_name", "") or ""
+        if not tool_name or tool_name in self._known:
+            return
+        logger.warning("拦截幻觉工具调用: %s（未注册，已跳过执行）", tool_name)
+        ctx.extra["_skip_tool"] = True
+        ctx.inputs.tool_result = (
+            f"ERROR: 工具「{tool_name}」不存在，本次调用未执行。"
+            "不要重试同名或换名字调用该类工具。"
+            f"可调用的工具仅限：{'、'.join(sorted(self._known))}。"
+            "若用户消息中包含「分析框架请包含以下组件」，这些分析组件已自动传入报告管线，"
+            "无需也不能调用任何匹配模板/匹配组件类工具；"
+            "核实活动后请直接调用 generate_report 生成报告。"
+        )
+        tool_call = getattr(ctx.inputs, "tool_call", None)
+        ctx.inputs.tool_msg = ToolMessage(
+            content=ctx.inputs.tool_result,
+            tool_call_id=getattr(tool_call, "id", "") if tool_call else "",
+        )
 
 
 class ToolProgressRail(AgentRail):

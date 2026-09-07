@@ -13,7 +13,12 @@ from openjiuwen.core.single_agent import AgentCard, ReActAgent, ReActAgentConfig
 
 from src.agent_v3.prompts.system import build_system_prompt
 from src.agent_v3.tools import WRITE_TOOLS
-from src.agent_v3.rails import ApprovalEditRail, ToolCallLimitRail, ToolProgressRail
+from src.agent_v3.rails import (
+    ApprovalEditRail,
+    ToolCallLimitRail,
+    ToolProgressRail,
+    UnknownToolGuardRail,
+)
 from src.agent_v3.tools import ALL_V3_TOOLS
 from src.config import get_settings
 from src.llm import LoggingModel, resolve_temperature
@@ -72,6 +77,10 @@ async def get_v3_agent() -> ReActAgent:
             Runner.resource_mgr.add_tool(t)
             agent.ability_manager.add(t.card)
         await agent.register_rail(ApprovalEditRail(tool_names=sorted(WRITE_TOOLS)))
+        # 幻觉工具拦截须先于 ToolCallLimitRail：被拦截的调用不执行、不计额度
+        await agent.register_rail(
+            UnknownToolGuardRail(known_tools=[t.card.name for t in ALL_V3_TOOLS])
+        )
         await agent.register_rail(ToolCallLimitRail(max_calls=settings.agent_v3_max_tool_calls_per_run))
         await agent.register_rail(ToolProgressRail())
         _agent = agent

@@ -33,6 +33,8 @@ AGENT_V2_SYSTEM_PROMPT = """你是银行营销活动分析智能体。你通过�
 5. 工具返回以 "ERROR:" 开头的内容表示执行失败，必须如实告知用户原因并给出替代建议，禁止静默失败或编造数据。
 6. 一次回复中如需多个工具结果才能回答，按依赖顺序依次调用。
 7. 外呼视角确认：generate_report 返回 {"status":"need_confirm"} 表示所选活动中混有非外呼活动。你必须原样向用户列出非外呼活动名称并询问是否继续；用户明确同意后，以相同参数加 confirm_mixed=true 重新调用 generate_report；用户拒绝则停止，不得再次调用。
+8. 报告页预选组件：用户消息中出现"分析框架请包含以下组件"时，这些分析组件已随请求自动传入报告管线，无需也不能调用任何匹配模板、匹配组件/匹配 SKILL 类工具——这类工具不存在，调用必然失败；核实活动后直接调用 generate_report，管线会自动按这些组件编排报告。
+9. 只允许调用已列出的工具，禁止编造或猜测工具名；收到"工具不存在"类错误时不得重试同名工具，只能改用已列出的工具或直接用文字回复。
 
 ## 意图处理手册
 
@@ -112,6 +114,15 @@ def build_system_prompt() -> str:
         "然后直接调用 generate_report，传入该活动编号和 perspective=\"comprehensive_operations\"；"
         "仅当查询结果包含多个活动时，才需要与用户确认活动范围与视角。"
     )
+    preset_components_routing_rule = (
+        "用户消息中出现\"分析框架请包含以下组件\"时，这些分析组件已随请求自动传入报告管线，"
+        "无需也不能调用任何匹配模板、匹配组件/匹配 SKILL 类工具——这类工具不存在，调用必然失败；"
+        "核实活动后直接调用 generate_report，管线会自动按这些组件编排报告。"
+    )
+    known_tools_only_rule = (
+        "只允许调用已列出的工具，禁止编造或猜测工具名；"
+        "收到\"工具不存在\"类错误时不得重试同名工具，只能改用已列出的工具或直接用文字回复。"
+    )
     if export_visibility_rule not in prompt:
         prompt = f"{prompt.rstrip()}\n\n## 报告生成后展示规则\n\n{export_visibility_rule}\n"
     if export_result_rule not in prompt:
@@ -126,4 +137,8 @@ def build_system_prompt() -> str:
         prompt = f"{prompt.rstrip()}\n\n## 上传文件路由规则\n\n{uploaded_data_routing_rule}\n"
     if single_activity_default_perspective_rule not in prompt:
         prompt = f"{prompt.rstrip()}\n\n## 单活动报告默认视角规则\n\n{single_activity_default_perspective_rule}\n"
+    if preset_components_routing_rule not in prompt:
+        prompt = f"{prompt.rstrip()}\n\n## 报告页预选组件路由规则\n\n{preset_components_routing_rule}\n"
+    if known_tools_only_rule not in prompt:
+        prompt = f"{prompt.rstrip()}\n\n## 工具白名单规则\n\n{known_tools_only_rule}\n"
     return prompt
