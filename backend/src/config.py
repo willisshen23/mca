@@ -184,6 +184,8 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:5173,http://159.1.56.109:8080",
         alias="ALLOWED_ORIGINS",
     )
+    # 是否开放 /docs、/redoc、/openapi.json 接口文档，默认关闭以防接口信息泄露
+    enable_docs: bool = Field(default=False, alias="ENABLE_DOCS")
     max_upload_size_mb: int = Field(default=50, alias="MAX_UPLOAD_SIZE_MB")
     report_html_guard_max_retries: int = Field(default=1, alias="REPORT_HTML_GUARD_MAX_RETRIES")
 

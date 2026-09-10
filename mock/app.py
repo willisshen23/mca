@@ -38,10 +38,16 @@ if not _log.handlers:
     _log.addHandler(_handler)
 _log.propagate = False
 
+# 默认关闭 /docs、/redoc、/openapi.json，防止接口信息泄露；联调时可设 ENABLE_DOCS=true 开启
+_enable_docs = os.getenv("ENABLE_DOCS", "").lower() == "true"
+
 app = FastAPI(
     title="活动数据 Mock API",
     description="基于 Excel 样例数据的活动查询接口，支持按活动名称模糊搜索；同时提供活动模板清单查询接口以及外呼活动详情查询接口。",
     version="1.1.0",
+    openapi_url="/openapi.json" if _enable_docs else None,
+    docs_url="/docs" if _enable_docs else None,
+    redoc_url="/redoc" if _enable_docs else None,
 )
 
 app.add_middleware(

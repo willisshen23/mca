@@ -168,3 +168,4 @@ deploy/docker/seed-data/*
 # 构建期下载的离线依赖缓存（大文件，不入库）
 backend/wheels/
 offline-v3/wheels-aarch64/*.whl
+docs/营销活动分析助手-Docker镜像部署文档(Linux).docx

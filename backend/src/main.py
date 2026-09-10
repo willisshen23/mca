@@ -245,7 +245,14 @@ async def lifespan(app: FastAPI):
     _log.info("agent_v3: openjiuwen Runner stopped")
 
 
-app = FastAPI(title="活动分析助手", lifespan=lifespan)
+# 默认关闭 /docs、/redoc、/openapi.json，防止接口信息泄露；联调时可设 ENABLE_DOCS=true 开启
+app = FastAPI(
+    title="活动分析助手",
+    lifespan=lifespan,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+)
 
 origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
 
