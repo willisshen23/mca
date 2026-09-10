@@ -259,6 +259,11 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
+# AuthSDK 鉴权服务反向代理（镜像内无 nginx，由此转发 /authApi/* 到鉴权服务）
+from src.api.auth_proxy import router as auth_proxy_router
+
+app.include_router(auth_proxy_router, prefix="/authApi")
+
 
 @app.middleware("http")
 async def log_api_request(request: Request, call_next):
