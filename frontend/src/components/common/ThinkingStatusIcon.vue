@@ -34,7 +34,7 @@ defineProps({
     <template v-else>
       <image
         class="thinking-status-icon__asset"
-        href="/analysis-complete-icon.png"
+        :href="'./analysis-complete-icon.png'"
         x="-5"
         y="-2"
         width="46"

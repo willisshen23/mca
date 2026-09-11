@@ -34,6 +34,10 @@ class SpaStaticFiles(StaticFiles):
             return False
         if normalized == "api" or normalized.startswith(("api/", "assets/")):
             return False
+        # FastAPI 文档路径不做 SPA 兜底：文档接口关闭时应返回真实 404，
+        # 而不是前端页面（200 会误导为文档仍然生效）。
+        if normalized in ("docs", "redoc"):
+            return False
         # Missing files keep their real 404 response; extensionless paths are
         # treated as Vue Router history-mode routes.
         return not Path(normalized).suffix

@@ -2,38 +2,46 @@
  * AuthSDK - 登录授权 SDK
  *
  * 提供给其他系统接入调用，功能：
- * 1. 仅当 URL 含有 hwcloud 参数时启用登录校验；不含该参数时 SDK 直接放行（不弹窗、不校验）
+ * 1. 仅当 URL 路径含有 "data-ai" 时启用登录校验；不含该路径时 SDK 直接放行（不弹窗、不校验）
  * 2. 页面加载时检查用户是否已通过「邮箱 + 验证码」登录（凭据存于 localStorage）
  * 3. 未登录时强制弹出登录弹窗（可切换到「申请体验」表单）
  * 4. 未登录时阻塞业务代码执行（AuthSDK.ready() Promise 挂起，业务 JS 不加载）
  * 5. financeToken 具有 30 分钟有效期：恢复凭据时校验是否过期，页面停留期间到点自动登出弹窗重新登录
  * 6. 弹窗不可被用户通过常规手段（ESC、点击遮罩、DevTools 删除 DOM）关闭
  *
- * 接入方式：
+ * 接入方式（零配置，直接引入即可运行）：
+ *   <script src="auth-sdk.js"></script>
+ *   <!-- 接口地址已内置为默认配置（DEFAULT_CONFIG），无需调用 init -->
+ *
+ * 如需覆盖默认配置（可选）：
  *   <script src="auth-sdk.js"></script>
  *   <script>
- *     AuthSDK.init({
- *       // 申请体验（申请Tab，表单编码），POST { email, username }
- *       applyApi: 'http://1.95.124.163:5003/login',
- *       // 获取动态验证码（登录面板按钮，表单编码），POST { email }
- *       codeApi: 'http://1.95.124.163:5003/register/send_code',
- *       // 体验码登录（表单编码），POST { email, code }
- *       loginApi: 'http://1.95.124.163:5003/register',
- *       // 登录态校验：URL 带 ?financeToken=xxx 时自动调用 GET checkLoginApi?financeToken=xxx
- *       // 返回 { valid, email, username, expires_at }，valid 为 true 时放行并保存 financeToken
- *       checkLoginApi: 'http://1.95.124.163:5003/check_login',
- *       useMock: true                // 可选：内置 mock 接口，演示时无需后端
- *     });
- *     AuthSDK.ready().then(user => {
- *       // 登录成功后才动态加载业务 JS（推荐用这种方式接业务脚本）
- *       loadScript('business.js');
- *     });
+ *     AuthSDK.init({ loginApi: 'https://your-api/login', useMock: true });
  *   </script>
+ *
+ * 业务 JS 建议通过 ready() 动态加载，实现「未登录不加载业务」：
+ *   AuthSDK.ready().then(user => loadScript('business.js'));
  */
 (function (global) {
   'use strict';
 
   var STORAGE_KEY = 'auth_sdk_credentials';
+
+  /**
+   * 内置默认接口配置：接入方直接引入 SDK 即可运行，无需调用 init 配置。
+   * 如需覆盖某项，调用 AuthSDK.init({ loginApi: '...' }) 即可（未传项仍用默认值）。
+   */
+  var DEFAULT_CONFIG = {
+    // 申请体验码（申请Tab，表单编码）：POST { email, username, phone, reason }
+    applyApi: '/authApi/register',
+    // 获取动态验证码（登录面板按钮，表单编码）：POST { email }
+    codeApi: '/authApi/login/send_code',
+    // 体验码登录（表单编码）：POST { email, code }
+    // 成功返回：{ message, financeToken, username, email, expires_in }
+    loginApi: '/authApi/login',
+    // 登录态校验：GET /authApi/check_login?token=xxx -> { valid, email, username, expires_at }
+    checkLoginApi: '/authApi/check_login'
+  };
 
   /* ---------------- 工具函数 ---------------- */
 
@@ -52,6 +60,11 @@
 
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function isValidPhone(phone) {
+    // 中国大陆手机号：1 开头 11 位数字
+    return /^1[3-9]\d{9}$/.test(phone);
   }
 
   function randomCode() {
@@ -126,6 +139,7 @@
 
   function AuthSDK() {
     this._config = {};
+    this._inited = false; // 是否已初始化（显式 init 或自动初始化）
     this._readyPromise = null;
     this._readyResolve = null;
     this._overlay = null;
@@ -138,13 +152,19 @@
 
   /**
    * 初始化 SDK
-   * @param {Object} config
-   * @param {string} [config.loginApi]   登录接口地址
-   * @param {string} [config.applyApi]   验证码申请接口地址
-   * @param {boolean} [config.useMock]   使用内置 mock 接口（演示用）
+   * @param {Object} [config] 可选配置，未传项使用内置默认值（DEFAULT_CONFIG）：
+   *   { applyApi, codeApi, loginApi, checkLoginApi, useMock }
+   *   直接调用 AuthSDK.init() 或依赖自动初始化均可，零配置运行
    */
   AuthSDK.prototype.init = function (config) {
-    this._config = config || {};
+    // 默认配置 + 用户配置浅合并（用户传入项覆盖默认值）
+    var cfg = {};
+    Object.keys(DEFAULT_CONFIG).forEach(function (k) { cfg[k] = DEFAULT_CONFIG[k]; });
+    if (config) {
+      Object.keys(config).forEach(function (k) { cfg[k] = config[k]; });
+    }
+    this._config = cfg;
+    this._inited = true;
     // 页面加载时立即建立 ready Promise，业务方挂起等待
     this._bootReadyPromise();
     return this;
@@ -156,8 +176,8 @@
       self._readyResolve = resolve;
     });
 
-    // URL 不含 hwcloud 参数：不做登录校验，直接放行（SDK 视同未启用）
-    if (!this._hasHwcloudParam()) {
+    // URL 路径不含 "data-ai"：不做登录校验，直接放行（SDK 视同未启用）
+    if (!this._hasDataAiPath()) {
       this._user = { skipped: true };
       this._readyResolve(this._user);
       return;
@@ -195,16 +215,44 @@
     }
 
     if (this.isLoggedIn()) {
-      this._readyResolve(this._user);
+      var localFinanceToken = this._user.financeToken;
+      if (localFinanceToken && (this._config.checkLoginApi || this._config.useMock)) {
+        // 本地存在 financeToken：进入页面时仍需调用 check_login 实时校验（服务端鉴权）
+        this._checkLogin(localFinanceToken)
+          .then(function (json) {
+            if (json && json.valid) {
+              // 校验通过：保留原登录时间，用服务端返回刷新用户信息与凭据
+              self._user.email = json.email || self._user.email;
+              self._user.username = json.username || self._user.username;
+              if (json.expires_at) self._user.expires_at = json.expires_at;
+              global.localStorage.setItem('financeToken', self._user.financeToken);
+              global.localStorage.setItem(STORAGE_KEY, JSON.stringify(self._user));
+              self._startSessionTimer();
+              self._readyResolve(self._user);
+            } else {
+              // 服务端判定已失效：清除本地凭据并弹窗重新登录
+              self._clearCredentials();
+              self._pendingMsg = '登录已失效，请重新登录';
+              showModal();
+            }
+          })
+          .catch(function () {
+            // 校验接口异常：按未登录处理，弹窗拦截（保留凭据以便刷新后重试）
+            showModal();
+          });
+      } else {
+        // 未配置 checkLoginApi：退化为仅本地校验
+        this._readyResolve(this._user);
+      }
     } else {
       showModal();
     }
   };
 
-  /** 判断 URL 中是否含有 hwcloud 参数（?hwcloud / ?hwcloud=xxx / &hwcloud 均算） */
-  AuthSDK.prototype._hasHwcloudParam = function () {
+  /** 判断 URL 路径中是否含有 "data-ai" 路径段 */
+  AuthSDK.prototype._hasDataAiPath = function () {
     try {
-      return /[?&]hwcloud(=|&|$)/.test(global.location.search);
+      return global.location.pathname.indexOf('data-ai') !== -1;
     } catch (e) { return false; }
   };
 
@@ -216,12 +264,12 @@
     } catch (e) { return ''; }
   };
 
-  /** 调用 check_login 接口校验 financeToken 登录态（GET checkLoginApi?financeToken=xxx） */
+  /** 调用 check_login 接口校验 financeToken 登录态（GET checkLoginApi?token=xxx） */
   AuthSDK.prototype._checkLogin = function (financeToken) {
     var cfg = this._config;
     if (cfg.useMock) return mockApi.checkLogin(financeToken);
     if (!cfg.checkLoginApi) return Promise.reject({ message: '未配置 checkLoginApi' });
-    return fetch(cfg.checkLoginApi + '?financeToken=' + encodeURIComponent(financeToken), {
+    return fetch(cfg.checkLoginApi + '?token=' + encodeURIComponent(financeToken), {
       method: 'GET'
     })
       .then(function (res) {
@@ -372,10 +420,10 @@
     });
   };
 
-  /** 申请体验（申请Tab 使用：email + username） */
-  AuthSDK.prototype.applyCode = function (email, username) {
+  /** 申请体验（申请Tab 使用：email + username + phone + reason） */
+  AuthSDK.prototype.applyCode = function (email, username, phone, reason) {
     var cfg = this._config;
-    var body = { email: email, username: username };
+    var body = { email: email, username: username, phone: phone || '', reason: reason || '' };
     if (cfg.useMock) return this._post('__apply__', body);
     if (!cfg.applyApi) return Promise.reject({ message: '未配置 applyApi' });
     return this._post(cfg.applyApi, body);
@@ -431,8 +479,8 @@
       'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}',
       '.asdk-card{width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;',
       'padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,.28);box-sizing:border-box;}',
-      '.asdk-logo{width:44px;height:44px;border-radius:12px;background:#4f46e5;color:#fff;',
-      'display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 12px;}',
+      '.asdk-logo{width:44px;height:44px;border-radius:12px;background:#4f46e5;',
+      'display:flex;align-items:center;justify-content:center;margin:0 auto 12px;line-height:1;}',
       '.asdk-title{text-align:center;font-size:18px;font-weight:600;color:#0f172a;margin:0 0 4px;}',
       '.asdk-sub{text-align:center;font-size:13px;color:#64748b;margin:0 0 20px;}',
       '.asdk-tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:20px;}',
@@ -441,9 +489,14 @@
       '.asdk-tab.active{background:#fff;color:#4f46e5;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08);}',
       '.asdk-field{margin-bottom:14px;text-align:left;}',
       '.asdk-label{display:block;font-size:13px;color:#334155;margin-bottom:6px;font-weight:500;}',
+      '.asdk-required{color:#dc2626;margin-right:2px;}',
       '.asdk-input{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;',
       'padding:11px 12px;font-size:14px;color:#0f172a;outline:none;transition:border .2s;background:#fff;}',
       '.asdk-input:focus{border-color:#4f46e5;}',
+      '.asdk-textarea{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:10px;',
+      'padding:11px 12px;font-size:14px;color:#0f172a;outline:none;transition:border .2s;background:#fff;',
+      'resize:vertical;min-height:72px;font-family:inherit;line-height:1.5;}',
+      '.asdk-textarea:focus{border-color:#4f46e5;}',
       '.asdk-code-row{display:flex;gap:8px;}',
       '.asdk-code-row .asdk-input{flex:1;min-width:0;}',
       '.asdk-code-btn{border:1px solid #4f46e5;background:#fff;color:#4f46e5;font-size:13px;font-weight:500;',
@@ -464,7 +517,16 @@
     // 样式节点挂到卡片内，随弹窗一起销毁
 
     /* --- 结构 --- */
-    var logo = el('div', { class: 'asdk-logo', text: 'A' });
+    // 登录图标：盾牌轮廓 + 钥匙孔（寓意"安全登录/授权"）
+    var logoSvg =
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M12 2.5L4.5 5.4v5.1c0 4.6 3.2 8.9 7.5 10.5 4.3-1.6 7.5-5.9 7.5-10.5V5.4L12 2.5z"' +
+      ' stroke="#fff" stroke-width="1.8" stroke-linejoin="round" fill="none"/>' +
+      '<circle cx="12" cy="10" r="2.2" fill="#fff"/>' +
+      '<path d="M12 12.2v3.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>' +
+      '</svg>';
+    var logo = el('div', { class: 'asdk-logo' });
+    logo.innerHTML = logoSvg;
     var footerTip; // 底部提示（仅登录页显示）
 
     var title = el('p', { class: 'asdk-title', text: '登录授权' });
@@ -491,12 +553,24 @@
 
     // 申请面板
     var applyName = el('input', { class: 'asdk-input', type: 'text', placeholder: '请输入申请人姓名', autocomplete: 'name' });
+    var applyPhone = el('input', { class: 'asdk-input', type: 'tel', placeholder: '请输入手机号', maxlength: '11', autocomplete: 'tel' });
     var applyEmail = el('input', { class: 'asdk-input', type: 'email', placeholder: '请输入邮箱', autocomplete: 'email' });
+    var applyReason = el('textarea', { class: 'asdk-textarea', rows: '3', placeholder: '请输入申请原因', maxlength: '200' });
     var applyMsg = el('p', { class: 'asdk-msg' });
     var applyBtn = el('button', { class: 'asdk-btn', type: 'button', text: '申请体验' });
+    // 生成带红色必填星号的 label
+    function reqLabel(text) {
+      var lb = el('label', { class: 'asdk-label' });
+      lb.appendChild(el('span', { class: 'asdk-required', text: '*' }));
+      lb.appendChild(document.createTextNode(' ' + text));
+      return lb;
+    }
+
     var applyPanel = el('div', { style: 'display:none;' }, [
-      el('div', { class: 'asdk-field' }, [el('label', { class: 'asdk-label', text: '申请人姓名' }), applyName]),
-      el('div', { class: 'asdk-field' }, [el('label', { class: 'asdk-label', text: '邮箱' }), applyEmail]),
+      el('div', { class: 'asdk-field' }, [reqLabel('名称'), applyName]),
+      el('div', { class: 'asdk-field' }, [reqLabel('电话'), applyPhone]),
+      el('div', { class: 'asdk-field' }, [reqLabel('邮箱'), applyEmail]),
+      el('div', { class: 'asdk-field' }, [reqLabel('申请原因'), applyReason]),
       applyMsg, applyBtn,
       el('p', { class: 'asdk-tip', text: '审核结果将发送至您的邮箱' })
     ]);
@@ -607,12 +681,16 @@
     // 申请体验
     applyBtn.addEventListener('click', function () {
       var username = applyName.value.trim();
+      var phone = applyPhone.value.trim();
       var email = applyEmail.value.trim();
+      var reason = applyReason.value.trim();
       if (!username) return setMsg(applyMsg, '请输入申请人姓名', false);
+      if (!isValidPhone(phone)) return setMsg(applyMsg, '请输入正确的手机号', false);
       if (!isValidEmail(email)) return setMsg(applyMsg, '请输入正确的邮箱地址', false);
+      if (!reason) return setMsg(applyMsg, '请输入申请原因', false);
       applyBtn.disabled = true;
       applyBtn.textContent = '申请中…';
-      self.applyCode(email, username)
+      self.applyCode(email, username, phone, reason)
         .then(function (json) {
           var mockCode = json.data && json.data.code;
           // 优先展示后端返回的 message，无则使用默认文案
@@ -635,11 +713,11 @@
         });
     });
 
-    // 回车提交
+    // 回车提交（textarea 中回车为换行，不触发提交）
     [loginEmail, loginCode].forEach(function (i) {
       i.addEventListener('keydown', function (e) { if (e.key === 'Enter') loginBtn.click(); });
     });
-    [applyName, applyEmail].forEach(function (i) {
+    [applyName, applyPhone, applyEmail].forEach(function (i) {
       i.addEventListener('keydown', function (e) { if (e.key === 'Enter') applyBtn.click(); });
     });
 
@@ -717,5 +795,23 @@
   global.AuthSDK = new AuthSDK();
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = global.AuthSDK;
+  }
+
+  /**
+   * 自动初始化兜底：接入方只引入 <script src="auth-sdk.js">（未显式调用 init）时，
+   * 以内置默认配置自动启动登录校验，实现零配置接入。
+   * 若业务方在 DOMContentLoaded 前已显式调用 init(自定义配置)，则不会重复初始化。
+   */
+  if (global.document && typeof global.document.addEventListener === 'function') {
+    if (global.document.readyState === 'loading') {
+      global.document.addEventListener('DOMContentLoaded', function () {
+        if (!global.AuthSDK._inited) global.AuthSDK.init();
+      });
+    } else {
+      // 异步引入等已错过 DOMContentLoaded 的场景，尽快初始化
+      setTimeout(function () {
+        if (!global.AuthSDK._inited) global.AuthSDK.init();
+      }, 0);
+    }
   }
 })(typeof window !== 'undefined' ? window : this);

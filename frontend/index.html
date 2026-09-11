@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>活动分析助手</title>
+    <link rel="stylesheet" href="./lib/tabler-icons.min.css" />
+    <!-- AuthSDK v2.0：接口地址已内置默认配置（/authApi/*），引入即自动初始化，
+         无需调用 AuthSDK.init()；仅当 URL 路径含 "data-ai" 时启用登录校验 -->
+    <script src="./auth-sdk-v2.0.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- 开发环境入口（构建时由 vite 按 base './' 改写为 ./assets/* 相对路径） -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

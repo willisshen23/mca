@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
   const devApiTarget = env.VITE_DEV_API_TARGET || 'http://localhost:9111';
 
   return {
+    // 静态资源一律使用相对路径（./assets/*、./lib/* 等），
+    // 保证部署在网关子路径（如 /data-ai/）下也能正确加载
+    base: './',
     plugins: [vue()],
     resolve: {
       alias: {
