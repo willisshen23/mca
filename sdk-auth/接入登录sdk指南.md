@@ -26,16 +26,16 @@
   <script>
     AuthSDK.init({
       // 申请体验码（申请Tab）：POST { email, username }
-      applyApi: '/authApi/login',
+      applyApi: '/activity/authApi/login',
       // 获取动态体验码（登录面板按钮）：POST { email } -> { "message": "验证码已发送至您的邮箱" }
-      codeApi: '/authApi/register/send_code',
+      codeApi: '/activity/authApi/register/send_code',
       // 体验码登录：POST { email, code }
       // 成功返回：{ message, financeToken, username, email, expires_in }，financeToken 存入 localStorage["financeToken"]
-      loginApi: '/authApi/register',
+      loginApi: '/activity/authApi/register',
       // 登录态校验：页面 URL 带 ?financeToken=xxx 时自动调用
       // GET checkLoginApi?financeToken=xxx -> { valid, email, username, expires_at }
       // valid 为 true 时保存 financeToken 并放行页面；false 则弹出登录弹窗
-      checkLoginApi: '/authApi/check_login'
+      checkLoginApi: '/activity/authApi/check_login'
     });
   </script>
 ```

@@ -69,11 +69,8 @@ echo ">>> [2/6] 准备部署目录"
 mkdir -p "$STAGE_DIR" "$DIST_DIR" "$WHEELS_CACHE" "$V3_DIR/python"
 tar -C "$ROOT_DIR" \
     --exclude='backend/venv' --exclude='backend/.env' --exclude='backend/data' \
-    --exclude='backend/src/static' --exclude='*/__pycache__' \
+    --exclude='backend/src/static' --exclude='backend/wheels' --exclude='*/__pycache__' \
     -cf - backend | tar -C "$STAGE_DIR" -xf -
-tar -C "$ROOT_DIR" \
-    --exclude='ops/data' --exclude='ops/.env' --exclude='*/__pycache__' \
-    -cf - ops | tar -C "$STAGE_DIR" -xf -
 mkdir -p "$STAGE_DIR/data"
 cp -a "$ROOT_DIR/data/mysql" "$STAGE_DIR/data/mysql"
 # 应用只挂载 backend/src/infrastructure/static（backend/src/main.py StaticFiles），
@@ -86,9 +83,10 @@ mkdir -p "$STAGE_DIR/offline-bundle/python" "$STAGE_DIR/offline-bundle/wheels"
 echo ">>> [3/6] 编译业务代码字节码（pyc-only，剥离 .py 源码）"
 # .pyc 与 CPU 架构无关，用构建容器内 Python 3.12 编译即可同时服务两种架构；
 # 运维脚本 backend/scripts/*.py 保留源码（migrate-db.sh 运行期要执行）。
+# （ops/ 目录已于 e863bfe 移除，不再参与打包）
 COMPILE_PYTHON="$BUILD_PYTHON" EXPECT_PYTHON_VERSION=312 \
     bash "$ROOT_DIR/scripts/compile-pyc.sh" \
-        "$STAGE_DIR/backend/src" "$STAGE_DIR/ops/src"
+        "$STAGE_DIR/backend/src"
 
 echo ">>> [4/6] 准备便携 Python ($TARGET_ARCH)"
 PYTHON_ARCHIVE_TARGET="$STAGE_DIR/offline-bundle/python/$PYTHON_ARCHIVE_NAME"

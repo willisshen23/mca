@@ -100,7 +100,7 @@ nohup bash deploy-offline.sh </dev/null >/tmp/deploy.log 2>&1 &
 READY=0
 for _ in $(seq 1 120); do
     if backend/venv/bin/python -c \
-        "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status==200 else 1)" \
+        "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/activity/health', timeout=2).status==200 else 1)" \
         2>/dev/null; then
         READY=1; break
     fi

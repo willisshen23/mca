@@ -239,14 +239,16 @@ export function buildHtmlDocument(message) {
   // 统一将 LLM 可能使用的任意 ECharts CDN 或路径替换为项目本地路径
   html = html.replace(
     /https?:\/\/[^"'\s]*echarts[^"'\s]*\.min\.js/gi,
-    './lib/echarts.min.js'
+    '/lib/echarts.min.js'
   );
 
   // 使用 DOMParser 做结构化兜底：确保 echarts 库在 head 中同步加载，并修复裸 option 对象
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const ECHARTS_SRC = './lib/echarts.min.js';
+    // 站点根绝对路径：srcdoc iframe/新页签以宿主页面 URL 为 base，
+    // 嵌套路由（/main/analysis/report）下相对路径会 404
+    const ECHARTS_SRC = '/lib/echarts.min.js';
 
     // 规范化已有的 echarts 脚本引用。
     const scripts = Array.from(doc.querySelectorAll('script'));
@@ -667,7 +669,7 @@ export async function openHtmlReportInNewTab(message) {
 }
 
 async function inlineEchartsScript(html) {
-  const response = await fetch('./lib/echarts.min.js');
+  const response = await fetch('/lib/echarts.min.js');
   if (!response.ok) throw new Error('无法加载 echarts.min.js');
   const echartsScript = await response.text();
 

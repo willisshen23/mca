@@ -46,14 +46,14 @@ def _post_stream(path: str, payload: dict) -> list:
 
 
 def run(thread_id: str, message: str) -> list:
-    return _post_stream("/api/v2/agent/run", {
+    return _post_stream("/activity/api/v2/agent/run", {
         "thread_id": thread_id, "message": message, "original_user_text": message,
         "user_id": USER_ID, "org_no": "001", "channel": "AILMIS",
     })
 
 
 def resume_approve(thread_id: str, tool: str) -> list:
-    return _post_stream("/api/v2/agent/resume", {
+    return _post_stream("/activity/api/v2/agent/resume", {
         "thread_id": thread_id, "decision": "approve", "tool": tool,
         "user_id": USER_ID, "org_no": "001", "channel": "AILMIS",
     })
@@ -87,9 +87,9 @@ def run_with_approvals(thread_id: str, message: str, max_rounds: int = 6) -> lis
 
 def main() -> None:
     # 1. 健康检查
-    resp = httpx.get(f"{BASE}/health", timeout=10.0)
+    resp = httpx.get(f"{BASE}/activity/health", timeout=10.0)
     if resp.status_code != 200:
-        fail(f"/health HTTP {resp.status_code}")
+        fail(f"/activity/health HTTP {resp.status_code}")
     ok("健康检查")
 
     # 1.5 前端新鲜度：首页可访问且引用的是宿主机当前构建的哈希资产

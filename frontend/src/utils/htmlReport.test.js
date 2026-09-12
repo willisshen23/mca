@@ -32,7 +32,9 @@ describe('htmlReport', () => {
 
   it('buildHtmlDocument 注入 echarts 同步脚本与 resize 桥', () => {
     const out = buildHtmlDocument({ title: '测试', html: '<html><head></head><body><div id="chart-1"></div><script>{ "series": [] }</script></body></html>' });
-    expect(out).toContain('./lib/echarts.min.js');
+    // 必须用站点根绝对路径：srcdoc iframe / 新页签的 baseURL 是宿主页面 URL，
+    // 在 /main/analysis/report 等嵌套路由下相对路径会解析成 /main/analysis/lib/... 导致 404
+    expect(out).toContain('/lib/echarts.min.js');
     expect(out).toContain('data-iframe-resize');
     // CDN 形式的 echarts 引用统一替换为本地路径
     const cdn = buildHtmlDocument({ title: 't', html: '<html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script></head><body></body></html>' });

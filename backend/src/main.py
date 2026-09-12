@@ -32,7 +32,7 @@ class SpaStaticFiles(StaticFiles):
         normalized = path.strip("/")
         if not normalized:
             return False
-        if normalized == "api" or normalized.startswith(("api/", "assets/")):
+        if normalized == "activity/api" or normalized.startswith(("activity/api/", "assets/")):
             return False
         # FastAPI 文档路径不做 SPA 兜底：文档接口关闭时应返回真实 404，
         # 而不是前端页面（200 会误导为文档仍然生效）。
@@ -268,19 +268,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api")
+app.include_router(router, prefix="/activity/api")
 
-# AuthSDK 鉴权服务反向代理（镜像内无 nginx，由此转发 /authApi/* 到鉴权服务）
+# AuthSDK 鉴权服务反向代理（镜像内无 nginx，由此转发 /activity/authApi/* 到鉴权服务）
 from src.api.auth_proxy import router as auth_proxy_router
 
-app.include_router(auth_proxy_router, prefix="/authApi")
+app.include_router(auth_proxy_router, prefix="/activity/authApi")
 
 
 @app.middleware("http")
 async def log_api_request(request: Request, call_next):
     started = time.perf_counter()
     response = await call_next(request)
-    if request.url.path.startswith("/api"):
+    if request.url.path.startswith("/activity/api"):
         _log.info(
             "api_request method=%s path=%s status=%s cost_ms=%.2f",
             request.method,
@@ -291,7 +291,7 @@ async def log_api_request(request: Request, call_next):
     return response
 
 
-@app.get("/health")
+@app.get("/activity/health")
 async def health():
     return {"status": "ok"}
 

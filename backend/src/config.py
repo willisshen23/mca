@@ -174,8 +174,8 @@ class Settings(BaseSettings):
     host: str = Field(default="0.0.0.0", alias="HOST")
     port: int = Field(default=8000, alias="PORT")
 
-    # AuthSDK 鉴权服务：/authApi/* 反向代理的上游地址（含协议、主机、端口，不含路径）。
-    # 空串表示未启用，此时 /authApi/* 返回 503。
+    # AuthSDK 鉴权服务：/activity/authApi/* 反向代理的上游地址（含协议、主机、端口，不含路径）。
+    # 空串表示未启用，此时 /activity/authApi/* 返回 503。
     auth_service_base_url: str = Field(default="", alias="AUTH_SERVICE_BASE_URL")
     # 发送验证码邮件可能较慢，默认 60s
     auth_service_timeout_seconds: float = Field(default=60, alias="AUTH_SERVICE_TIMEOUT_SECONDS")

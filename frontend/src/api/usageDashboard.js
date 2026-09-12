@@ -1,5 +1,6 @@
 import { API_BASE } from './base.js';
 import { getUserId } from './conversations.js';
+import { getPageUrlParams } from '@/utils/pageUrlParams.js';
 
 function generateSessionId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -19,7 +20,7 @@ function getSessionId() {
 }
 
 export function getOrgNo() {
-  const params = new URLSearchParams(window.location.search);
+  const params = getPageUrlParams();
   const orgNo = (params.get('orgNo') || params.get('org_no') || '').trim();
   if (orgNo) {
     try {
@@ -84,7 +85,8 @@ export function recordUsageEvent(eventType, details = {}) {
       event_type: eventType,
       org_no: getOrgNo() || null,
       session_id: getSessionId(),
-      path: window.location.pathname,
+      // Hash 路由下 pathname 恒为 /，取 hash 里的路由路径（去掉 hash 内 query）
+      path: window.location.hash.replace(/^#/, '').split('?')[0] || window.location.pathname,
       referrer: document.referrer || null,
       ...details
     })

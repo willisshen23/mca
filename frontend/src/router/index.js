@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import MainSourceView from '../views/MainSourceView.vue';
 import MainComposeView from '../views/MainComposeView.vue';
@@ -15,7 +15,7 @@ import SettingsView from '../views/SettingsView.vue';
 import LogsView from '../views/LogsView.vue';
 
 const routes = [
-  { path: '/', redirect: '/chat-ui' },
+  { path: '/', redirect: '/main' },
   { path: '/management', name: 'main', component: HomeView },
   // 独立版数据源配置页：脱离管理后台框架（无侧边栏），内容与线上活动数据源配置一致
   { path: '/main', name: 'main-source', component: MainSourceView, meta: { standalone: true } },
@@ -37,6 +37,8 @@ const routes = [
 ];
 
 export default createRouter({
-  history: createWebHistory(),
+  // Hash 路由：文档 URL 恒为 /，srcdoc iframe、window.open 新页签里的相对资源
+  // 都按站点根解析，不受嵌套路由（/main/analysis/report）影响；服务端也无需 history 兜底
+  history: createWebHashHistory(),
   routes
 });

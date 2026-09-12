@@ -51,7 +51,7 @@ class UsageDashboardTest(unittest.TestCase):
         headers = {"X-User-Id": "user-001"}
         for event_type in ("home_view", "home_view"):
             response = self.client.post(
-                "/api/usage-dashboard/events",
+                "/activity/api/usage-dashboard/events",
                 headers=headers,
                 json={
                     "event_type": event_type,
@@ -134,7 +134,7 @@ class UsageDashboardTest(unittest.TestCase):
             )
             db.commit()
 
-        response = self.client.get("/api/usage-dashboard/summary?days=30")
+        response = self.client.get("/activity/api/usage-dashboard/summary?days=30")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["metrics"]["visitors"]["value"], 1)
@@ -171,7 +171,7 @@ class UsageDashboardTest(unittest.TestCase):
         ])
         self.assertEqual(len(data["trend"]), 30)
 
-        export_response = self.client.get("/api/usage-dashboard/export?days=30")
+        export_response = self.client.get("/activity/api/usage-dashboard/export?days=30")
         self.assertEqual(export_response.status_code, 200)
         self.assertIn(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -198,13 +198,13 @@ class UsageDashboardTest(unittest.TestCase):
 
     def test_event_validation_and_period_validation(self):
         response = self.client.post(
-            "/api/usage-dashboard/events",
+            "/activity/api/usage-dashboard/events",
             headers={"X-User-Id": "user-001"},
             json={"event_type": "unknown"},
         )
         self.assertEqual(response.status_code, 422)
         self.assertEqual(
-            self.client.get("/api/usage-dashboard/summary?days=14").status_code,
+            self.client.get("/activity/api/usage-dashboard/summary?days=14").status_code,
             422,
         )
 

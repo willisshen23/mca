@@ -1,7 +1,8 @@
 import { safeSetItem } from '@/utils/safeStorage.js';
+import { getPageUrlParams } from '@/utils/pageUrlParams.js';
 
 export function useChatUrlParams() {
-  const params = new URLSearchParams(window.location.search);
+  const params = getPageUrlParams();
   const userId = (params.get('userId') || '').trim();
   const userName = (params.get('userName') || '').trim();
   const orgNo = (params.get('orgNo') || '').trim();

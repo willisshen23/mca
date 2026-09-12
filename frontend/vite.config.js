@@ -20,12 +20,12 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
       proxy: {
-        '/api': {
+        '/activity/api': {
           target: devApiTarget,
           changeOrigin: true,
         },
         // AuthSDK 鉴权接口（后端再反向代理到鉴权服务）
-        '/authApi': {
+        '/activity/authApi': {
           target: devApiTarget,
           changeOrigin: true,
         },

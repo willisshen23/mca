@@ -38,7 +38,7 @@ def client():
 
 
 def test_list_enabled_prompts_returns_empty_by_default(client):
-    response = client.get("/api/quick-prompts")
+    response = client.get("/activity/api/quick-prompts")
     assert response.status_code == 200
     assert response.json() == {"prompts": []}
 
@@ -50,14 +50,14 @@ def test_admin_save_and_list(client):
             {"text": "话术二", "is_enabled": False},
         ]
     }
-    response = client.put("/api/quick-prompts/admin", json=payload)
+    response = client.put("/activity/api/quick-prompts/admin", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert len(data["prompts"]) == 2
     assert data["prompts"][0]["text"] == "话术一"
     assert data["prompts"][1]["is_enabled"] is False
 
-    response = client.get("/api/quick-prompts")
+    response = client.get("/activity/api/quick-prompts")
     assert response.status_code == 200
     assert response.json() == {"prompts": ["话术一"]}
 
@@ -69,7 +69,7 @@ def test_admin_save_rejects_empty_text(client):
             {"text": "  ", "is_enabled": True},
         ]
     }
-    response = client.put("/api/quick-prompts/admin", json=payload)
+    response = client.put("/activity/api/quick-prompts/admin", json=payload)
     assert response.status_code == 400
 
 
@@ -80,7 +80,7 @@ def test_admin_save_reorders(client):
             {"text": "B", "is_enabled": True},
         ]
     }
-    client.put("/api/quick-prompts/admin", json=payload)
+    client.put("/activity/api/quick-prompts/admin", json=payload)
 
     # 交换顺序后保存
     payload = {
@@ -89,7 +89,7 @@ def test_admin_save_reorders(client):
             {"text": "A", "is_enabled": True},
         ]
     }
-    response = client.put("/api/quick-prompts/admin", json=payload)
+    response = client.put("/activity/api/quick-prompts/admin", json=payload)
     data = response.json()
     assert data["prompts"][0]["text"] == "B"
     assert data["prompts"][0]["sort_order"] == 0
@@ -104,13 +104,13 @@ def test_admin_save_deletes_missing_items(client):
             {"text": "B", "is_enabled": True},
         ]
     }
-    client.put("/api/quick-prompts/admin", json=payload)
+    client.put("/activity/api/quick-prompts/admin", json=payload)
 
     payload = {
         "prompts": [
             {"text": "A", "is_enabled": True},
         ]
     }
-    response = client.put("/api/quick-prompts/admin", json=payload)
+    response = client.put("/activity/api/quick-prompts/admin", json=payload)
     data = response.json()
     assert len(data["prompts"]) == 1

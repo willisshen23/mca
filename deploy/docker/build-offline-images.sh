@@ -24,7 +24,8 @@ set -euo pipefail
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$DEPLOY_DIR/../.." && pwd)"
 SEED_DIR="$DEPLOY_DIR/seed-data"
-DIST_DIR="$PROJECT_ROOT/offline-dist"
+# 产物输出目录：默认 offline-dist/，可按架构分目录（如 offline-dist/x86、offline-dist/arm64）
+DIST_DIR="${DIST_DIR:-$PROJECT_ROOT/offline-dist}"
 DATA_DIR="$PROJECT_ROOT/backend/data"
 ACTION="${1:-all}"
 PLATFORM="${PLATFORM:-linux/amd64}"
@@ -140,7 +141,7 @@ export_images() {
    （skills.db / v3_checkpoints.db）拷入 runtime-data 卷。
 
 4. 验证：
-   curl http://localhost:9111/health   # {"status":"ok"}
+   curl http://localhost:9111/activity/health   # {"status":"ok"}
 ============================================================
 EOF
 }
@@ -203,8 +204,8 @@ bash deploy/docker/docker-deploy.sh up-no-build
 
 PORT="$(sed -n 's/^PORT=//p' backend/.env | tail -1 | tr -d "\"'[:space:]")"
 sleep 5
-echo "健康检查: http://localhost:${PORT:-9111}/health"
-curl -s -m 10 "http://localhost:${PORT:-9111}/health" && echo
+echo "健康检查: http://localhost:${PORT:-9111}/activity/health"
+curl -s -m 10 "http://localhost:${PORT:-9111}/activity/health" && echo
 INSTALL_EOF
     sed -i '' \
         -e "s|__APP_TAR__|$APP_TAR|g" \

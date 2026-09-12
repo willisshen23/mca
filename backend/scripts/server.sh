@@ -221,7 +221,7 @@ start_service() {
     if is_running "$pid"; then
         log "Service started, pid=$pid"
         log "Runtime log: $RUNTIME_LOG"
-        log "Health check: http://127.0.0.1:${PORT}/health"
+        log "Health check: http://127.0.0.1:${PORT}/activity/health"
     else
         rm -f "$PID_FILE"
         die "Service failed to start. Check $RUNTIME_LOG"
@@ -281,7 +281,7 @@ status_service() {
         log "Service is running"
         printf 'PID: %s\n' "$pid"
         printf 'URL: http://127.0.0.1:%s\n' "$PORT"
-        printf 'Health: http://127.0.0.1:%s/health\n' "$PORT"
+        printf 'Health: http://127.0.0.1:%s/activity/health\n' "$PORT"
         printf 'Runtime log: %s\n' "$RUNTIME_LOG"
     else
         log "Service is stopped"
