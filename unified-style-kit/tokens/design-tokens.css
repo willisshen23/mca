@@ -1,0 +1,170 @@
+/* ==========================================================================
+   FAB 统一设计令牌 (Design Tokens) —— 唯一真源
+   FinAgent Booster / 金融智能体加速器
+   --------------------------------------------------------------------------
+   所有色值、字号、间距、圆角、阴影只在这里定义一次。
+   三个项目（Advanced_Search_Cube / BOHAI / njbank）都引用这一份，
+   任何视觉调整只改这个文件，不要在业务代码里写死颜色。
+   ========================================================================== */
+
+:root {
+  /* ── 品牌色 ──────────────────────────────────────────────────────────── */
+  --fab-brand-blue:    #0081E4;   /* FinAgent Booster 字标蓝，品牌识别色 */
+  --fab-brand-cyan:    #02A6C9;   /* FAB 立方体青，仅用于 logo 与极少量点缀 */
+  --fab-brand-deep:    #1E57AE;   /* 深蓝，用于深色底、图标重色 */
+
+  /* ── 交互主色（按钮、链接、选中态）───────────────────────────────────── */
+  --color-primary:        #2B6EDD;
+  --color-primary-hover:  #1F5BC4;
+  --color-primary-active: #17499F;
+  --color-primary-weak:   #EAF1FD;  /* 主色浅底：选中行、hover 底、标签底 */
+  --color-primary-weaker: #F5F9FE;  /* 更浅一档：斑马纹、只读底 */
+  --color-primary-border: #BFD5F6;  /* 主色描边（胶囊按钮、聚焦框）*/
+
+  /* ── 辅助色 ─────────────────────────────────────────────────────────── */
+  --color-violet:      #8D9DF8;   /* 紫辅色，来自 hero 右侧 */
+  --color-violet-weak: #EFF0FE;
+
+  /* ── 语义色 ─────────────────────────────────────────────────────────── */
+  --color-success:        #12A150;
+  --color-success-weak:   #E8F7EE;
+  --color-success-border: #A8E0C2;
+  --color-warning:        #E08700;
+  --color-warning-weak:   #FDF3E2;
+  --color-warning-border: #F2D19A;
+  --color-danger:         #D92B2B;
+  --color-danger-hover:   #B81F1F;
+  --color-danger-weak:    #FDECEC;
+  --color-danger-border:  #F2B5B5;
+  --color-info:           #2B6EDD;
+  --color-info-weak:      #EAF1FD;
+
+  /* ── 文字 ───────────────────────────────────────────────────────────── */
+  --text-1:       #191919;   /* 标题、正文主体 */
+  --text-2:       #4A4F58;   /* 次级正文、表格内容 */
+  --text-3:       #727472;   /* 说明文字、标签、占位 */
+  --text-4:       #A3A8AF;   /* 禁用、极弱提示 */
+  --text-invert:  #FFFFFF;
+  --text-link:    var(--color-primary);
+
+  /* ── 背景与描边 ─────────────────────────────────────────────────────── */
+  --bg-page:      #FFFFFF;   /* 页面底：参考图 hero 以下为纯白 */
+  --bg-subtle:    #F6F9FD;   /* 浅底区块：表头、只读区、次级面板 */
+  --bg-sunken:    #EDF3FB;   /* 更沉一档：代码块、内嵌容器 */
+  --bg-elevated:  #FFFFFF;   /* 卡片、弹窗 */
+  --bg-mask:      rgba(16, 32, 60, .45);
+
+  --border-weak:    #EEF3FA;  /* 分隔线（表格行线）*/
+  --border-base:    #E5EFF9;  /* 卡片默认描边（取自参考图能力卡）*/
+  --border-strong:  #D6E1F3;  /* 输入框、需要强调的描边 */
+  --border-hover:   #BFD5F6;
+
+  /* ── Hero / 品牌渐变 ────────────────────────────────────────────────── */
+  --gradient-hero:
+      linear-gradient(180deg, #A4C7F0 0%, #C4DBF8 46%, #F2F6FB 88%, #FFFFFF 100%);
+  --gradient-hero-violet:
+      radial-gradient(78% 120% at 92% 2%, rgba(141,157,248,.78) 0%, rgba(141,157,248,.28) 38%, rgba(141,157,248,0) 66%);
+  --gradient-brand:
+      linear-gradient(135deg, #0081E4 0%, #2B6EDD 55%, #8D9DF8 100%);
+  --gradient-brand-soft:
+      linear-gradient(135deg, #EAF1FD 0%, #EFF0FE 100%);
+  --gradient-sidebar:
+      linear-gradient(180deg, #17499F 0%, #1F5BC4 58%, #2B6EDD 100%);
+  --gradient-skeleton:
+      linear-gradient(90deg, #EFF4FA 25%, #F7FAFD 37%, #EFF4FA 63%);
+
+  /* ── 零件色（不属于任何语义分组，但也不该写死在组件里）──────────── */
+  --color-violet-text:  #5A5FD6;  /* 紫标签上的文字，保证对比度 */
+  --scrollbar-thumb:       #C9D8EC;
+  --scrollbar-thumb-hover: #A9BFDD;
+  --switch-track-off:      #CBD5E4;
+
+  /* ── 字体 ───────────────────────────────────────────────────────────── */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas,
+               "Liberation Mono", monospace;
+  --font-number: var(--font-sans);   /* 数字位用 tabular-nums，见 base.css */
+
+  /* ── 字阶（统一基准 14px）───────────────────────────────────────────── */
+  --fs-display: 40px;  --lh-display: 1.25;  /* hero 主标题 */
+  --fs-h1:      28px;  --lh-h1:      1.35;  /* 页面主标题 */
+  --fs-h2:      22px;  --lh-h2:      1.4;   /* 区块标题 */
+  --fs-h3:      18px;  --lh-h3:      1.45;  /* 卡片标题 */
+  --fs-h4:      16px;  --lh-h4:      1.5;   /* 小标题 */
+  --fs-body:    14px;  --lh-body:    1.6;   /* 正文基准 */
+  --fs-sm:      13px;  --lh-sm:      1.55;  /* 表格、表单 */
+  --fs-xs:      12px;  --lh-xs:      1.5;   /* 说明、标签 */
+  --fs-2xs:     11px;  --lh-2xs:     1.45;  /* 角标、极弱信息 */
+  --fs-metric:  32px;  --lh-metric:  1.2;   /* KPI 数值 */
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* ── 间距（4 的倍数）────────────────────────────────────────────────── */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* ── 圆角 ───────────────────────────────────────────────────────────── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;   /* 卡片默认，取自参考图能力卡 */
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-pill: 999px;  /* 胶囊按钮、流程节点、状态标签 */
+
+  /* ── 阴影（一律浅、带蓝调，不用纯黑）──────────────────────────────── */
+  --shadow-none: none;
+  --shadow-xs:   0 1px 2px rgba(30, 58, 110, .05);
+  --shadow-sm:   0 2px 8px rgba(30, 58, 110, .06);
+  --shadow-md:   0 6px 20px rgba(30, 58, 110, .08);
+  --shadow-lg:   0 14px 40px rgba(30, 58, 110, .12);
+  --shadow-focus: 0 0 0 3px rgba(43, 110, 221, .16);
+
+  /* ── 尺寸规格 ───────────────────────────────────────────────────────── */
+  --control-h-sm: 28px;   /* 小号按钮 / 输入框 */
+  --control-h-md: 34px;   /* 默认 */
+  --control-h-lg: 42px;   /* 主行动按钮 / 搜索框 */
+
+  /* 布局尺寸：⚠️ 这些值是「沿用各项目现有排版」的记录值，不是统一要求。
+     统一的是颜色 / 字阶 / 圆角 / 阴影 / 描边，排版不动。
+     各项目保持自己的壳，只把壳的配色换成下面这组。 */
+  --shell-topbar-h:          64px;   /* BOHAI 现有顶栏 h-16 = 64px */
+  --shell-topbar-h-compact:  48px;   /* njbank 现有顶栏 48px */
+  --shell-iconbar-w:         52px;   /* njbank 现有图标侧栏 52px */
+  --shell-sidebar-w:         220px;  /* Advanced_Search 后台现有侧栏 220px */
+  --shell-listbar-w:         240px;  /* Advanced_Search 检索页左右侧栏各 240px */
+  --shell-content-max:       1920px; /* BOHAI 现有 max-w-[1920px] */
+  --shell-gutter:            24px;
+
+  /* ── 层级 ───────────────────────────────────────────────────────────── */
+  --z-sticky:  100;
+  --z-dropdown: 200;
+  --z-mask:    300;
+  --z-modal:   310;
+  --z-toast:   400;
+
+  /* ── 动效 ───────────────────────────────────────────────────────────── */
+  --ease-out:   cubic-bezier(.22, .61, .36, 1);
+  --dur-fast:   .12s;
+  --dur-base:   .2s;
+  --dur-slow:   .32s;
+}
+
+/* 无障碍：尊重系统的减少动效设置 */
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0s; --dur-base: 0s; --dur-slow: 0s; }
+}

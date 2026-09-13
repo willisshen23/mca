@@ -2,6 +2,40 @@
 import { reactive } from 'vue';
 import { API_BASE } from '../api/base.js';
 
+// ECharts 以 init 瞬间的容器尺寸初始化画布。报告在 srcdoc iframe 中渲染，
+// 流式更新/布局尚未稳定时脚本可能拿到过小的容器尺寸，而 LLM 生成的图表脚本
+// 一般不注册 resize 监听，导致图表永远停留在小尺寸（标题偏左、饼图缩在角落）。
+// 这里注入一个尺寸监督脚本：load 后统一 resize 一次纠正错误初始化，
+// 并用 ResizeObserver 监听每个图表容器 + window resize，尺寸变化即重绘。
+export const CHART_RESIZE_SCRIPT = `(function() {
+  function resizeAll() {
+    try {
+      if (!window.echarts || !echarts.getInstanceByDom) return;
+      var nodes = document.querySelectorAll('[_echarts_instance_]');
+      for (var i = 0; i < nodes.length; i += 1) {
+        var inst = echarts.getInstanceByDom(nodes[i]);
+        if (inst) inst.resize();
+      }
+    } catch (e) {}
+  }
+  function setup() {
+    resizeAll();
+    window.addEventListener('resize', resizeAll);
+    try {
+      var ro = window.ResizeObserver;
+      if (!ro) return;
+      var observer = new ro(resizeAll);
+      var containers = document.querySelectorAll('[_echarts_instance_], [id^="chart"]');
+      for (var i = 0; i < containers.length; i += 1) observer.observe(containers[i]);
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') {
+    setup();
+  } else {
+    window.addEventListener('load', setup);
+  }
+})();`;
+
 export const IFRAME_RESIZE_SCRIPT = `(function() {
   function postHeight() {
     try {
@@ -35,6 +69,26 @@ const HTML_REPORT_MIN_HEIGHT = 360;
 const PNG_EXPORT_TIMEOUT_MS = 90000;
 const pendingPngExports = new Map();
 let html2canvasLoader = null;
+
+// 应用可能部署在子路径下（如生产的 /activity/），不能写死根绝对路径，
+// 否则会打到部署前缀之外导致 404。运行时从已加载的构建产物
+// <script src=".../assets/index-*.js"> 反推部署 base（.src 已被浏览器解析为绝对 URL）；
+// dev 环境没有 /assets/ 脚本，vite 以根路径服务 public/，回退为 '/'。
+export function getAppBaseUrl() {
+  const script = document.querySelector('script[src*="/assets/"]');
+  if (script) {
+    const src = script.src;
+    return src.slice(0, src.indexOf('/assets/') + 1);
+  }
+  return '/';
+}
+
+// echarts 库的完整 URL（含部署前缀），供 fetch 与报告 HTML 的 <script src> 使用。
+// 报告会渲染进 srcdoc iframe / 新页签，baseURL 是宿主页面 URL，
+// 在 /main/analysis/report 等嵌套路由下相对路径会 404，因此返回解析好的绝对 URL。
+export function echartsScriptUrl() {
+  return `${getAppBaseUrl()}lib/echarts.min.js`;
+}
 
 export function installPngSnapshotBridge() {
   let capturing = false;
@@ -171,6 +225,20 @@ export function injectPngSnapshotBridge(doc) {
   }
 }
 
+export function injectChartResizeScript(doc) {
+  let head = doc.querySelector('head');
+  if (!head) {
+    head = doc.createElement('head');
+    const htmlEl = doc.querySelector('html') || doc.documentElement;
+    htmlEl.insertBefore(head, htmlEl.firstChild);
+  }
+  if (head.querySelector('script[data-chart-resize]')) return;
+  const script = doc.createElement('script');
+  script.setAttribute('data-chart-resize', 'true');
+  script.textContent = CHART_RESIZE_SCRIPT;
+  head.appendChild(script);
+}
+
 function handleHtmlReportResize(event) {
   if (!event.data || event.data.type !== 'html-report-resize') return;
   const height = parseInt(event.data.height, 10);
@@ -249,19 +317,19 @@ export function buildHtmlDocument(message) {
   if (htmlStartMatch && htmlStartMatch.index > 0) {
     html = html.slice(htmlStartMatch.index);
   }
-  // 统一将 LLM 可能使用的任意 ECharts CDN 或路径替换为项目本地路径
+  // 统一将 LLM 可能使用的任意 ECharts CDN 或路径替换为项目本地路径（含部署前缀）
   html = html.replace(
     /https?:\/\/[^"'\s]*echarts[^"'\s]*\.min\.js/gi,
-    '/lib/echarts.min.js'
+    echartsScriptUrl()
   );
 
   // 使用 DOMParser 做结构化兜底：确保 echarts 库在 head 中同步加载，并修复裸 option 对象
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    // 站点根绝对路径：srcdoc iframe/新页签以宿主页面 URL 为 base，
+    // 含部署前缀的绝对 URL：srcdoc iframe/新页签以宿主页面 URL 为 base，
     // 嵌套路由（/main/analysis/report）下相对路径会 404
-    const ECHARTS_SRC = '/lib/echarts.min.js';
+    const ECHARTS_SRC = echartsScriptUrl();
 
     // 规范化已有的 echarts 脚本引用。
     const scripts = Array.from(doc.querySelectorAll('script'));
@@ -359,6 +427,8 @@ export function buildHtmlDocument(message) {
 
     // 注入 iframe 高度自适应脚本，让预览 iframe 根据报告内容自动调整高度
     injectResizeScript(doc);
+    // 注入图表尺寸监督脚本，纠正 init 时拿到错误容器尺寸的图表
+    injectChartResizeScript(doc);
     // 沙箱 iframe 只回传无脚本静态快照，PNG 在父页面的同源环境生成。
     injectPngSnapshotBridge(doc);
 
@@ -372,8 +442,10 @@ export function buildHtmlDocument(message) {
 
   const scriptOpen = '<' + 'script data-iframe-resize="true">';
   const scriptClose = '<' + '/script>';
+  const chartResizeScriptOpen = '<' + 'script data-chart-resize="true">';
   const pngBridgeScriptOpen = '<' + 'script data-png-export-bridge="true">';
   const escapedResizeScript = IFRAME_RESIZE_SCRIPT.replace(/<\/script/gi, '<\\/script');
+  const escapedChartResizeScript = CHART_RESIZE_SCRIPT.replace(/<\/script/gi, '<\\/script');
   const escapedPngBridgeScript = `(${installPngSnapshotBridge.toString()})();`
     .replace(/<\/script/gi, '<\\/script');
   return html.toLowerCase().startsWith('<!doctype') || html.toLowerCase().startsWith('<html')
@@ -385,6 +457,7 @@ export function buildHtmlDocument(message) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${message.title || '活动分析报告'}</title>
   ${scriptOpen}${escapedResizeScript}${scriptClose}
+  ${chartResizeScriptOpen}${escapedChartResizeScript}${scriptClose}
   ${pngBridgeScriptOpen}${escapedPngBridgeScript}${scriptClose}
   <style>
     body { margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2937; line-height: 1.65; background: #fff; }
@@ -698,7 +771,7 @@ export async function openHtmlReportInNewTab(message) {
 }
 
 export async function inlineEchartsScript(html) {
-  const response = await fetch('/lib/echarts.min.js');
+  const response = await fetch(echartsScriptUrl());
   if (!response.ok) throw new Error('无法加载 echarts.min.js');
   const echartsScript = await response.text();
 

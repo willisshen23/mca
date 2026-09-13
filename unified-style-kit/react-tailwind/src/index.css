@@ -1,0 +1,48 @@
+/* ==========================================================================
+   FAB 统一风格 —— React + Tailwind 入口样式（对应 BOHAI 项目）
+   覆盖 BOHAI_Bank_Manager_Assistant-main/frontend/src/index.css
+   ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 同时引入 CSS 变量层，便于在 style={{}} 或第三方组件里引用统一 token */
+@import '../../tokens/design-tokens.css';
+
+@layer base {
+  body {
+    @apply bg-page text-t1 font-sans text-base antialiased;
+    margin: 0;
+  }
+  h1 { @apply text-h1; }
+  h2 { @apply text-h2; }
+  h3 { @apply text-h3; }
+  h4 { @apply text-h4; }
+
+  /* 焦点可见性：键盘导航必须看得见 */
+  :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2; }
+
+  /* 数字等宽 */
+  .num { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  /* 滚动条统一 */
+  .fab-scroll { scrollbar-width: thin; scrollbar-color: #C9D8EC transparent; }
+  .fab-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .fab-scroll::-webkit-scrollbar-track { background: transparent; }
+  .fab-scroll::-webkit-scrollbar-thumb {
+    background: #C9D8EC; border-radius: 999px;
+    border: 2px solid transparent; background-clip: content-box;
+  }
+
+  /* 点阵 chevron 流程连接器（Tailwind 表达不了，手写） */
+  .flow-arrow {
+    width: 104px; height: 34px; flex-shrink: 0;
+    background-image: radial-gradient(#BFD5F6 1.2px, transparent 1.2px);
+    background-size: 7px 7px;
+    background-position: center;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%);
+  }
+}

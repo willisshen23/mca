@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         // AuthSDK 鉴权接口（后端再反向代理到鉴权服务）
-        '/activity/authApi': {
+        '/authApi': {
           target: devApiTarget,
           changeOrigin: true,
         },

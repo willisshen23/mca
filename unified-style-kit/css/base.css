@@ -1,0 +1,116 @@
+/* ==========================================================================
+   FAB 统一风格 —— 基础层 (reset + 排版)
+   依赖：tokens/design-tokens.css
+   ========================================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+h1 { font-size: var(--fs-h1); line-height: var(--lh-h1); font-weight: var(--fw-semibold); }
+h2 { font-size: var(--fs-h2); line-height: var(--lh-h2); font-weight: var(--fw-semibold); }
+h3 { font-size: var(--fs-h3); line-height: var(--lh-h3); font-weight: var(--fw-semibold); }
+h4 { font-size: var(--fs-h4); line-height: var(--lh-h4); font-weight: var(--fw-semibold); }
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+a:hover { color: var(--color-primary-hover); }
+
+img, svg, video { max-width: 100%; display: block; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+hr { border: 0; border-top: 1px solid var(--border-base); margin: var(--sp-6) 0; }
+
+code, pre, kbd, samp { font-family: var(--font-mono); font-size: .92em; }
+
+/* 数字位对齐：金额、KPI、表格数字列统一等宽数字 */
+.num,
+.fab-metric__value,
+.fab-table td.num,
+.fab-table th.num { font-variant-numeric: tabular-nums; }
+
+/* ── 文字工具类 ─────────────────────────────────────────────────────────── */
+.t-display { font-size: var(--fs-display); line-height: var(--lh-display); font-weight: var(--fw-bold); letter-spacing: -.01em; }
+.t-h1      { font-size: var(--fs-h1);   line-height: var(--lh-h1);   font-weight: var(--fw-semibold); }
+.t-h2      { font-size: var(--fs-h2);   line-height: var(--lh-h2);   font-weight: var(--fw-semibold); }
+.t-h3      { font-size: var(--fs-h3);   line-height: var(--lh-h3);   font-weight: var(--fw-semibold); }
+.t-h4      { font-size: var(--fs-h4);   line-height: var(--lh-h4);   font-weight: var(--fw-semibold); }
+.t-body    { font-size: var(--fs-body); line-height: var(--lh-body); }
+.t-sm      { font-size: var(--fs-sm);   line-height: var(--lh-sm); }
+.t-xs      { font-size: var(--fs-xs);   line-height: var(--lh-xs); }
+.t-2xs     { font-size: var(--fs-2xs);  line-height: var(--lh-2xs); }
+
+.t-1 { color: var(--text-1); }
+.t-2 { color: var(--text-2); }
+.t-3 { color: var(--text-3); }
+.t-4 { color: var(--text-4); }
+.t-primary { color: var(--color-primary); }
+.t-success { color: var(--color-success); }
+.t-warning { color: var(--color-warning); }
+.t-danger  { color: var(--color-danger); }
+
+.t-medium   { font-weight: var(--fw-medium); }
+.t-semibold { font-weight: var(--fw-semibold); }
+.t-bold     { font-weight: var(--fw-bold); }
+
+.t-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-center   { text-align: center; }
+.t-right    { text-align: right; }
+
+/* ── 滚动条：统一为细、浅蓝、无轨道 ───────────────────────────────────── */
+.fab-scroll { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+.fab-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.fab-scroll::-webkit-scrollbar-track { background: transparent; }
+.fab-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.fab-scroll::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); background-clip: content-box; }
+
+/* ── 焦点可见性：键盘导航必须看得见 ───────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ── 入场动效（克制使用）─────────────────────────────────────────────── */
+@keyframes fab-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.fab-fade-up { animation: fab-fade-up var(--dur-slow) var(--ease-out) both; }
+
+/* ── 图标 ───────────────────────────────────────────────────────────────── */
+/* 统一线性图标：24×24 网格、1.6 描边、currentColor 上色。
+   三个项目现在分别用 emoji / lucide-react / tabler-icons，
+   统一后要求：同一页面内只用一套线性图标，禁止 emoji 与线性图标混排。 */
+.i   { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; flex-shrink: 0; }
+.i-sm { width: 14px; height: 14px; }
+.i-lg { width: 20px; height: 20px; }
+.i-xl { width: 24px; height: 24px; }
+.i-2xl { width: 32px; height: 32px; }

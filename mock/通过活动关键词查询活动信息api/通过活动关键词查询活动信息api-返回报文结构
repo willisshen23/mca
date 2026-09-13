@@ -1,7 +1,7 @@
 [
   {
     "actNo": "PV10183802026050833850",
-    "actName": "个养缴存营销-滨江支行",
+    "actName": "个养缴存营销-云溪支行",
     "actTypeCd": "Y",
     "actSrcCd": "01",
     "actStartDt": "2026-05-09",
@@ -9,7 +9,7 @@
     "actStatusCd": "Y8",
     "actDesc": "面向已开立个人养老金账户客户开展缴存营销，引导客户持续缴存并配置养老目标产品",
     "creatorAfltOrgNo": "220101015",
-    "creatorAfltOrgName": "杭州滨江科技支行零售金融部",
+    "creatorAfltOrgName": "望澜市云溪科技支行零售金融部",
     "creatorNo": "1018380",
     "creatorName": "陈*",
     "createTm": "2026-05-06 10:24:00",
@@ -19,7 +19,7 @@
   },
   {
     "actNo": "PV10183802026050832848",
-    "actName": "个养开户营销-滨江支行",
+    "actName": "个养开户营销-云溪支行",
     "actTypeCd": "Y",
     "actSrcCd": "01",
     "actStartDt": "2026-05-08",
@@ -27,7 +27,7 @@
     "actStatusCd": "Y8",
     "actDesc": "面向未开立个人养老金账户客户开展开户营销，配套开户权益与首次缴存激励",
     "creatorAfltOrgNo": "220101015",
-    "creatorAfltOrgName": "杭州滨江科技支行零售金融部",
+    "creatorAfltOrgName": "望澜市云溪科技支行零售金融部",
     "creatorNo": "1018380",
     "creatorName": "陈*",
     "createTm": "2026-05-06 09:12:00",
@@ -37,7 +37,7 @@
   },
   {
     "actNo": "PV10124792026051122848",
-    "actName": "个养缴存营销-钱塘支行",
+    "actName": "个养缴存营销-星洲支行",
     "actTypeCd": "Y",
     "actSrcCd": "01",
     "actStartDt": "2026-05-11",
@@ -45,7 +45,7 @@
     "actStatusCd": "Y8",
     "actDesc": "面向已开立个人养老金账户客户开展缴存营销，引导客户持续缴存并配置养老目标产品",
     "creatorAfltOrgNo": "220108",
-    "creatorAfltOrgName": "杭州钱塘小微企业专营支行",
+    "creatorAfltOrgName": "望澜市星洲小微企业专营支行",
     "creatorNo": "1012479",
     "creatorName": "寿**",
     "createTm": "2026-05-09 14:36:00",
@@ -55,7 +55,7 @@
   },
   {
     "actNo": "PV10124792026051112629",
-    "actName": "个养开户营销-钱塘支行",
+    "actName": "个养开户营销-星洲支行",
     "actTypeCd": "Y",
     "actSrcCd": "01",
     "actStartDt": "2026-05-11",
@@ -63,7 +63,7 @@
     "actStatusCd": "Y8",
     "actDesc": "面向未开立个人养老金账户客户开展开户营销，配套开户权益与首次缴存激励",
     "creatorAfltOrgNo": "220108",
-    "creatorAfltOrgName": "杭州钱塘小微企业专营支行",
+    "creatorAfltOrgName": "望澜市星洲小微企业专营支行",
     "creatorNo": "1012479",
     "creatorName": "寿**",
     "createTm": "2026-05-09 14:20:00",
@@ -73,7 +73,7 @@
   },
   {
     "actNo": "ACT20260116906568",
-    "actName": "26.1泰州无锡·新开户存款意向客群",
+    "actName": "26.1临川云泽·新开户存款意向客群",
     "actTypeCd": "Y",
     "actSrcCd": "02",
     "actStartDt": "2026-01-17",
@@ -92,7 +92,7 @@
   },
   {
     "actNo": "ACT20260116906569",
-    "actName": "26.1泰州无锡·理财到期承接客群B",
+    "actName": "26.1临川云泽·理财到期承接客群B",
     "actTypeCd": "Y",
     "actSrcCd": "02",
     "actStartDt": "2026-01-17",
@@ -111,7 +111,7 @@
   },
   {
     "actNo": "ACT20260116906570",
-    "actName": "26.1泰州无锡·代发工资客群资金留存提升C",
+    "actName": "26.1临川云泽·代发工资客群资金留存提升C",
     "actTypeCd": "Y",
     "actSrcCd": "02",
     "actStartDt": "2026-01-17",

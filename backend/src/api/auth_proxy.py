@@ -2,7 +2,7 @@
 
 镜像部署时浏览器直连本服务（无前置 nginx），前端 AuthSDK 的
 /login、/register/send_code、/register、/check_login 请求经
-/activity/authApi/* 打到本服务，由这里剥掉 /activity/authApi 前缀转发到鉴权服务
+/authApi/* 打到本服务，由这里剥掉 /authApi 前缀转发到鉴权服务
 （AUTH_SERVICE_BASE_URL，如 http://1.95.124.163:5003）。
 """
 

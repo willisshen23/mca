@@ -1,0 +1,265 @@
+/* ==========================================================================
+   FAB 统一风格 —— 外壳层
+   --------------------------------------------------------------------------
+   ⚠️ 重要：这一层不改变任何项目的排版结构。
+   三种壳分别复刻三个项目「现在已经在用」的排版，只把配色、描边、圆角、
+   阴影换成统一 token。迁移时对照着替换颜色即可，DOM 结构不用动。
+
+     .fab-shell--topnav   顶部横向导航（= BOHAI 现有排版，顶栏 64px）
+     .fab-shell--iconbar  52px 图标侧栏 + 48px 顶栏（= njbank 现有排版）
+     .fab-shell--sidebar  220px 纵向侧栏（= Advanced_Search 后台现有排版）
+     .fab-shell--chat     顶栏 + 对话流 + 底部输入（= Advanced_Search index.html 现有排版）
+     .fab-shell--three    顶栏 + 左侧栏 + 对话主区 + 右侧栏 + 输入区
+                          （= Advanced_Search Advanced_Search.html 现有排版）
+   ========================================================================== */
+
+/* ── 通用：整屏壳 ──────────────────────────────────────────────────────── */
+.fab-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-page); }
+.fab-shell__main { flex: 1; min-width: 0; }
+
+
+/* ==========================================================================
+   壳 A —— 顶部横向导航（BOHAI 现有排版）
+   原样式：bg-white shadow-sm border-b / h-16 / max-w-[1920px]
+   ========================================================================== */
+.fab-shell--topnav .fab-topbar {
+  position: sticky; top: 0;
+  z-index: var(--z-sticky);
+  height: var(--shell-topbar-h);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-base);
+  box-shadow: var(--shadow-xs);
+}
+.fab-shell--topnav .fab-topbar__inner {
+  height: 100%;
+  max-width: var(--shell-content-max);
+  margin: 0 auto;
+  padding: 0 var(--shell-gutter);
+  display: flex; align-items: center; gap: var(--sp-4);
+}
+.fab-shell--topnav .fab-topbar__nav { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; overflow-x: auto; }
+.fab-shell--topnav .fab-topbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
+.fab-shell--topnav .fab-shell__main {
+  min-width: 0;
+  max-width: var(--shell-content-max);
+  width: 100%; margin: 0 auto;
+  padding: var(--sp-6) var(--shell-gutter) var(--sp-12);
+}
+
+/* 移动端下拉 */
+.fab-shell--topnav .fab-topbar__drawer {
+  display: none;
+  position: absolute; top: var(--shell-topbar-h); left: 0; right: 0;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-base);
+  box-shadow: var(--shadow-md);
+  padding: var(--sp-2) var(--shell-gutter) var(--sp-4);
+  z-index: var(--z-dropdown);
+}
+.fab-shell--topnav .fab-topbar__drawer.is-open { display: block; }
+.fab-shell--topnav .fab-topbar__toggle { display: none; }
+@media (max-width: 900px) {
+  .fab-shell--topnav .fab-topbar__nav { display: none; }
+  .fab-shell--topnav .fab-topbar__toggle { display: inline-flex; }
+}
+
+
+/* ==========================================================================
+   壳 B —— 52px 图标侧栏 + 48px 顶栏（njbank 现有排版）
+   ========================================================================== */
+.fab-shell--iconbar { flex-direction: row; height: 100vh; overflow: hidden; }
+.fab-shell--iconbar .fab-iconbar {
+  width: var(--shell-iconbar-w);
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-base);
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--sp-3) 0;
+  gap: var(--sp-1);
+}
+.fab-shell--iconbar .fab-iconbar__logo {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-brand);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: var(--fw-bold);
+  margin-bottom: var(--sp-4);
+  flex-shrink: 0;
+}
+.fab-shell--iconbar .fab-iconbar__bottom { margin-top: auto; }
+
+.fab-shell--iconbar .fab-shell__main { display: flex; flex-direction: column; overflow: hidden; }
+.fab-shell--iconbar .fab-subbar {
+  height: var(--shell-topbar-h-compact);
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-base);
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 0 var(--sp-5);
+}
+.fab-shell--iconbar .fab-content { flex: 1; overflow-y: auto; padding: var(--sp-5); min-width: 0; }
+.fab-shell--iconbar .fab-footbar {
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-base);
+  padding: var(--sp-3) var(--sp-5);
+  display: flex; justify-content: flex-end; gap: var(--sp-2);
+}
+@media (max-width: 640px) { .fab-shell--iconbar .fab-iconbar { width: 48px; } }
+
+
+/* ==========================================================================
+   壳 C —— 220px 纵向侧栏（Advanced_Search 后台现有排版）
+   原样式是深蓝渐变实心侧栏。新风格保留「深色侧栏」这个排版决定，
+   但把渐变换成品牌蓝，并降低饱和，让它和白色主区拉开层次而不抢眼。
+   ========================================================================== */
+.fab-shell--sidebar { flex-direction: row; }
+.fab-shell--sidebar .fab-sidebar {
+  width: var(--shell-sidebar-w);
+  flex-shrink: 0;
+  position: fixed; top: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column;
+  background: var(--gradient-sidebar);
+  color: rgba(255, 255, 255, .88);
+  z-index: var(--z-sticky);
+}
+.fab-shell--sidebar .fab-sidebar__brand {
+  padding: var(--sp-6) var(--sp-5);
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+}
+.fab-shell--sidebar .fab-sidebar__brand strong { display: block; font-size: var(--fs-h4); font-weight: var(--fw-semibold); color: #fff; letter-spacing: .5px; }
+.fab-shell--sidebar .fab-sidebar__brand small { display: block; margin-top: var(--sp-1); font-size: var(--fs-2xs); opacity: .72; letter-spacing: .5px; }
+.fab-shell--sidebar .fab-sidebar__nav { padding: var(--sp-4) var(--sp-3); flex: 1; overflow-y: auto; }
+.fab-shell--sidebar .fab-sidebar__foot { padding: var(--sp-4) var(--sp-5); border-top: 1px solid rgba(255,255,255,.14); font-size: var(--fs-2xs); opacity: .7; }
+
+/* 深色底上的导航项覆写 */
+.fab-shell--sidebar .fab-sidelink { color: rgba(255, 255, 255, .84); }
+.fab-shell--sidebar .fab-sidelink:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.fab-shell--sidebar .fab-sidelink.is-active { background: rgba(255, 255, 255, .2); color: #fff; }
+
+.fab-shell--sidebar .fab-shell__main {
+  margin-left: var(--shell-sidebar-w);
+  padding: var(--sp-8) var(--sp-8) var(--sp-12);
+  background: var(--bg-subtle);
+  min-height: 100vh;
+}
+@media (max-width: 900px) {
+  .fab-shell--sidebar .fab-sidebar { display: none; }
+  .fab-shell--sidebar .fab-shell__main { margin-left: 0; padding: var(--sp-5) var(--sp-4); }
+}
+
+
+/* ==========================================================================
+   壳 D —— 对话式（Advanced_Search 主页现有排版）
+   原样式是深蓝渐变顶栏 + 渐变灰蓝底。新风格改为浅色顶栏 + 白底，
+   与参考图的明亮基调一致；排版（顶栏 / 消息流 / 底部输入）保持不变。
+   ========================================================================== */
+.fab-shell--chat { height: 100vh; overflow: hidden; }
+.fab-shell--chat .fab-chatbar {
+  flex-shrink: 0;
+  height: var(--shell-topbar-h);
+  padding: 0 var(--sp-6);
+  display: flex; align-items: center; gap: var(--sp-4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-base);
+}
+.fab-shell--chat .fab-chatbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-3); }
+.fab-shell--chat .fab-shell__main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg-page); }
+.fab-shell--chat .fab-chat-scroll { flex: 1; overflow-y: auto; padding: var(--sp-8) var(--sp-6); }
+.fab-shell--chat .fab-chat-inner { max-width: 900px; margin: 0 auto; }
+.fab-shell--chat .fab-chat-foot {
+  flex-shrink: 0;
+  padding: var(--sp-4) var(--sp-6) var(--sp-6);
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--bg-page) 32%);
+}
+.fab-shell--chat .fab-chat-foot > * { max-width: 900px; margin: 0 auto; }
+
+/* 欢迎屏（对话为空时）*/
+.fab-welcome { max-width: 1000px; margin: 0 auto; padding: var(--sp-16) 0 var(--sp-10); text-align: center; }
+.fab-welcome__orb {
+  width: 76px; height: 76px; margin: 0 auto var(--sp-8);
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  opacity: .92;
+  box-shadow: 0 12px 40px rgba(43, 110, 221, .28);
+}
+.fab-welcome__title { font-size: var(--fs-h1); font-weight: var(--fw-semibold); color: var(--text-1); margin-bottom: var(--sp-3); }
+.fab-welcome__desc  { font-size: var(--fs-body); color: var(--text-3); margin-bottom: var(--sp-10); }
+
+/* 窄屏：品牌名截断、右侧操作区可收缩，避免顶栏把页面撑出横向滚动条 */
+@media (max-width: 1100px) {
+  .fab-shell--topnav .fab-topbar__inner { gap: var(--sp-2); }
+  .fab-shell--topnav .fab-brand { min-width: 0; flex-shrink: 1; }
+  .fab-shell--topnav .fab-brand__name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 34vw; font-size: var(--fs-body);
+  }
+  /* 右侧操作区在窄屏必须可收缩，否则会把整页撑出横向滚动条 */
+  .fab-shell--topnav .fab-topbar__actions { flex-shrink: 1; min-width: 0; }
+  .fab-shell--topnav .fab-topbar__actions .fab-navlink span,
+  .fab-shell--topnav .fab-topbar__actions .fab-btn span { display: none; }
+  .fab-shell--topnav .fab-topbar__actions .fab-navlink,
+  .fab-shell--topnav .fab-topbar__actions .fab-btn { padding: 0 var(--sp-2); }
+}
+@media (max-width: 1100px) { [data-hide-sm] { display: none !important; } }
+@media (max-width: 640px) {
+  .fab-shell--topnav .fab-brand__name { max-width: 26vw; }
+  .fab-shell--topnav .fab-topbar__inner { padding: 0 var(--sp-4); }
+}
+
+
+/* ==========================================================================
+   壳 E —— 三栏检索工作台（Advanced_Search.html 现有排版）
+   原结构：.app-header + .chat-container( aside.sidebar-left / .chat-main /
+           aside.sidebar-right ) + .input-area，两侧栏各 240px。
+   视觉层改动：深蓝渐变顶栏 → 浅色顶栏；#e3e8f0 描边 → --border-base；
+   #2c7da0 青色点缀 → --color-primary；正文 15px → 14px。
+   ========================================================================== */
+.fab-shell--three { height: 100vh; overflow: hidden; }
+.fab-shell--three .fab-chatbar {
+  flex-shrink: 0;
+  height: var(--shell-topbar-h);
+  padding: 0 var(--sp-6);
+  display: flex; align-items: center; gap: var(--sp-4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-base);
+}
+.fab-shell--three .fab-chatbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-3); }
+
+.fab-shell--three .fab-shell__main { display: flex; overflow: hidden; min-height: 0; }
+
+.fab-shell--three .fab-side {
+  width: var(--shell-listbar-w);
+  flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.fab-shell--three .fab-side--left  { border-right: 1px solid var(--border-base); }
+.fab-shell--three .fab-side--right { border-left: 1px solid var(--border-base); }
+.fab-shell--three .fab-side__header {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--border-weak);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-1);
+}
+.fab-shell--three .fab-side__list { flex: 1; overflow-y: auto; padding: var(--sp-2); }
+
+.fab-shell--three .fab-center { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fab-shell--three .fab-chat-scroll { flex: 1; overflow-y: auto; padding: var(--sp-6); }
+.fab-shell--three .fab-chat-inner  { max-width: 880px; margin: 0 auto; }
+.fab-shell--three .fab-input-area {
+  flex-shrink: 0;
+  display: flex; align-items: flex-end; gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-6);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-base);
+}
+.fab-shell--three .fab-input-area .fab-composer { flex: 1; min-width: 0; box-shadow: none; }
+
+/* 窄屏：两侧栏收起，主区独占（原项目也是这个取舍） */
+@media (max-width: 1180px) { .fab-shell--three .fab-side--right { display: none; } }
+@media (max-width: 900px)  { .fab-shell--three .fab-side--left  { display: none; } }

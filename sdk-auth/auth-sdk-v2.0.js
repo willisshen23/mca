@@ -33,14 +33,14 @@
    */
   var DEFAULT_CONFIG = {
     // 申请体验码（申请Tab，表单编码）：POST { email, username, phone, reason }
-    applyApi: '/activity/authApi/register',
+    applyApi: '/authApi/register',
     // 获取动态验证码（登录面板按钮，表单编码）：POST { email }
-    codeApi: '/activity/authApi/login/send_code',
+    codeApi: '/authApi/login/send_code',
     // 体验码登录（表单编码）：POST { email, code }
     // 成功返回：{ message, financeToken, username, email, expires_in }
-    loginApi: '/activity/authApi/login',
-    // 登录态校验：GET /activity/authApi/check_login?token=xxx -> { valid, email, username, expires_at }
-    checkLoginApi: '/activity/authApi/check_login'
+    loginApi: '/authApi/login',
+    // 登录态校验：GET /authApi/check_login?token=xxx -> { valid, email, username, expires_at }
+    checkLoginApi: '/authApi/check_login'
   };
 
   /* ---------------- 工具函数 ---------------- */

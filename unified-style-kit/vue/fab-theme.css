@@ -1,0 +1,237 @@
+/* ==========================================================================
+   FAB 统一风格 —— njbank 主题覆盖层（最小改动方案）
+   --------------------------------------------------------------------------
+   njbank 现有的 src/assets/styles.css 已经把颜色抽成了 :root 变量
+   （--primary / --pl / --ph / --bg / --border / --t1 / --t2 / --t3 / --r），
+   所以不需要重写它，只要在它之后再引入这一层就行：
+
+       // njbank frontend/src/main.js
+       import './assets/styles.css'
+       import './assets/fab-theme.css'   // ← 加这一行
+
+   本层做三件事：
+     ① 把 njbank 的旧变量重新映射到 FAB token（覆盖颜色）
+     ② 补上 njbank 变量表达不了的部分（字号 13→14、圆角、阴影、描边层级）
+     ③ 修正几处写死的十六进制色值（njbank 原文件里有约 30 处硬编码）
+
+   ⚠️ 一个 .vue 文件都不用改，排版完全不变。
+   ========================================================================== */
+
+@import '../tokens/design-tokens.css';
+
+/* ── ① 旧变量 → FAB token ─────────────────────────────────────────────── */
+:root {
+  --primary: #2B6EDD;   /* 原 #165DFF */
+  --ph:      #1F5BC4;   /* 原 #0E47CC，primary hover */
+  --pl:      #EAF1FD;   /* 原 #E8F0FF，primary 浅底 */
+  --danger:  #D92B2B;   /* 原 #F53F3F */
+  --d:       #D92B2B;
+  --bg:      #FFFFFF;   /* 原 #F7F8FA —— 参考图 hero 以下为纯白 */
+  --border:  #E5EFF9;   /* 原 #E5E6EB */
+  --t1:      #191919;   /* 原 #1D2129 */
+  --t2:      #4A4F58;   /* 原 #4E5969 */
+  --t3:      #727472;   /* 原 #86909C */
+  --r:       10px;      /* 原 6px —— 控件圆角 */
+}
+
+/* ── ② 基础排印：13px → 统一基准 14px ────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-1);
+}
+.app { background: var(--bg-page); }
+
+/* 原文件里大量 font-size: 12px / 13px 的小字，整体上抬一档 */
+.btn        { font-size: var(--fs-sm); }
+.fi, .fin, .fsel { font-size: var(--fs-sm); }
+.tbl td, .skt td { font-size: var(--fs-sm); }
+.tbl th, .skt th { font-size: var(--fs-xs); }
+.flabel, .fl { font-size: var(--fs-xs); color: var(--text-2); }
+
+/* ── ③ 外壳：侧栏 / 顶栏 / 内容区 ────────────────────────────────────── */
+.sb      { border-right: 1px solid var(--border-base); padding: var(--sp-3) 0; }
+.logo    { background: var(--gradient-brand); border-radius: var(--radius-md); }
+.ni      { border-radius: var(--radius-md); }
+.ni:hover, .ni.active { background: var(--color-primary-weak); }
+.topbar  { border-bottom: 1px solid var(--border-base); height: 48px; }
+.content { padding: var(--sp-5); }
+.fbar    { border-top: 1px solid var(--border-base); padding: var(--sp-3) var(--sp-5); }
+
+/* ── ④ 按钮 ──────────────────────────────────────────────────────────── */
+.btn {
+  min-height: var(--control-h-md);
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-md);
+  border-color: var(--border-strong);
+  font-weight: var(--fw-medium);
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.btn:hover      { border-color: var(--border-hover); background: var(--color-primary-weaker); color: var(--color-primary); }
+.btn.pri        { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.btn.pri:hover  { background: var(--color-primary-hover); border-color: var(--color-primary-hover); color: #fff; }
+.btn.ghost      { border-color: var(--color-primary-border); color: var(--color-primary); }
+.btn.ghost:hover{ background: var(--color-primary-weak); border-color: var(--color-primary); }
+.btn.dbtn       { background: var(--color-danger); border-color: var(--color-danger); color: #fff; }
+.btn.dbtn:hover { background: var(--color-danger-hover); border-color: var(--color-danger-hover); }
+.btn.dis, .btn:disabled { background: var(--bg-sunken); border-color: var(--border-base); color: var(--text-4); }
+.btn.sm         { min-height: var(--control-h-sm); padding: 0 var(--sp-3); font-size: var(--fs-xs); }
+
+/* ── ⑤ 表单 ──────────────────────────────────────────────────────────── */
+.fi, .fin, .fsel, .fta,
+.tpl-filter select, .tpl-filter input, .aiin input, .drin input {
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.fi:hover, .fin:hover, .fsel:hover, .fta:hover { border-color: var(--border-hover); }
+.fi:focus, .fin:focus, .fsel:focus, .fta:focus,
+.aiin input:focus, .drin input:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+.fi, .fin, .fsel { height: var(--control-h-md); padding: 0 var(--sp-3); }
+.req { color: var(--color-danger); }
+
+/* ── ⑥ 卡片与容器 ───────────────────────────────────────────────────── */
+.sc, .rph, .rcard, .sklib, .canvas, .aip, .lkbar, .skt {
+  border-color: var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+.sc     { padding: var(--sp-5); margin-bottom: var(--sp-4); }
+.stitle { font-size: var(--fs-h4); }
+.hmc, .hmcard {
+  border-color: var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out);
+}
+.hmc:hover, .hmcard:hover {
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.hmc-ic, .hmcard-ico { background: var(--color-primary-weak); border-radius: var(--radius-md); }
+
+/* KPI */
+.kpi  { background: var(--bg-subtle); border-radius: var(--radius-md); padding: var(--sp-4); }
+.kpiv { font-size: var(--fs-metric); font-variant-numeric: tabular-nums; }
+.sti  { border-color: var(--border-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: var(--sp-5); }
+.stn  { font-size: var(--fs-metric); font-variant-numeric: tabular-nums; }
+.stc  { color: var(--color-success); }
+
+/* Banner：原来是主色实心块，改为品牌渐变 */
+.hbanner, .hmbanner {
+  background: var(--gradient-brand);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── ⑦ 表格 ──────────────────────────────────────────────────────────── */
+.tbl th, .skt th { background: var(--bg-subtle); color: var(--text-3); border-bottom-color: var(--border-base); }
+.tbl td, .skt td { border-bottom-color: var(--border-weak); color: var(--text-2); }
+.tbl tr:hover td, .skt tr:hover td { background: var(--color-primary-weaker); }
+.tbl tr.sel td   { background: var(--color-primary-weak); }
+.ck { accent-color: var(--color-primary); }
+
+/* 分页 */
+.pgn { border-top-color: var(--border-weak); }
+.pgb { border-color: var(--border-strong); border-radius: var(--radius-sm); color: var(--text-2); }
+.pgb:hover, .pgb.active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* ── ⑧ 标签 / 状态（修正原文件的硬编码色值）────────────────────────── */
+.tag  { border-radius: var(--radius-sm); font-size: var(--fs-2xs); padding: 2px var(--sp-2); }
+.tb, .tb2 { background: var(--color-primary-weak); color: var(--color-primary); }
+.tg   { background: var(--color-success-weak); color: var(--color-success); }
+.to   { background: var(--color-warning-weak); color: var(--color-warning); }
+.tgr  { background: var(--bg-sunken); color: var(--text-2); }
+.tpur { background: var(--color-violet-weak); color: var(--color-violet-text); }
+.ton  { background: var(--color-primary-weak); color: var(--color-primary); }
+.toff { background: var(--color-warning-weak); color: var(--color-warning); }
+.chip { background: var(--color-primary-weak); color: var(--color-primary); border-radius: var(--radius-sm); }
+
+/* ── ⑨ 提示条 / 上传区 ──────────────────────────────────────────────── */
+.itip, .selbar {
+  background: var(--color-primary-weak);
+  border-color: var(--color-primary-border);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-xs);
+}
+.uz { border-color: var(--border-strong); border-radius: var(--radius-md); background: var(--bg-subtle); }
+.uz:hover { border-color: var(--color-primary); background: var(--color-primary-weak); }
+.uz.ok { border-color: var(--color-success); background: var(--color-success-weak); }
+.uz.ok i, .uz.ok p { color: var(--color-success); }
+.insi     { background: var(--bg-subtle); border-left-color: var(--color-primary); border-radius: var(--radius-sm); }
+.insi.w   { background: var(--color-warning-weak); border-left-color: var(--color-warning); }
+.insi.g   { background: var(--color-success-weak); border-left-color: var(--color-success); }
+.empty-canvas-hint { border-color: var(--border-strong); border-radius: var(--radius-md); background: var(--bg-subtle); }
+
+/* ── ⑩ 步骤条 ───────────────────────────────────────────────────────── */
+.st       { font-size: var(--fs-xs); }
+.sd       { width: 22px; height: 22px; border-color: var(--border-strong); border-width: 1.5px; }
+.st.active            { color: var(--color-primary); }
+.st.active .sd        { border-color: var(--color-primary); color: var(--color-primary); }
+.st.done              { color: var(--color-success); }
+.st.done .sd          { border-color: var(--color-success); background: var(--color-success); }
+.sl      { background: var(--border-strong); }
+.sl.done { background: var(--color-primary); }
+
+/* ── ⑪ 弹窗 ─────────────────────────────────────────────────────────── */
+.mbk    { background: var(--bg-mask); backdrop-filter: blur(2px); }
+.modal  { border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
+.mh     { border-bottom-color: var(--border-weak); padding: var(--sp-5) var(--sp-6); }
+.mh h3  { font-size: var(--fs-h4); }
+.mh h3.danger { color: var(--color-danger); }
+.mb     { padding: var(--sp-6); }
+.mf     { border-top-color: var(--border-weak); padding: var(--sp-4) var(--sp-6); }
+.mc:hover { background: var(--bg-sunken); }
+
+/* ── ⑫ 技能画布 / AI 面板 / 悬浮球 ─────────────────────────────────── */
+.skcard, .cc { border-color: var(--border-base); border-radius: var(--radius-md); }
+.skcard      { background: var(--bg-subtle); }
+.skcard:hover, .cc:hover, .cc.drag-over { border-color: var(--color-primary); background: var(--color-primary-weak); }
+.cbtn        { border-color: var(--border-strong); border-radius: var(--radius-sm); }
+.cbtn:hover  { border-color: var(--color-primary); color: var(--color-primary); }
+.cbtn.del:hover { border-color: var(--color-danger); color: var(--color-danger); }
+.aicon       { border-color: var(--border-strong); border-radius: var(--radius-sm); }
+.aicon.ed:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-weak); }
+.aicon.dl:hover { border-color: var(--color-danger); color: var(--color-danger); background: var(--color-danger-weak); }
+
+.aim.ai, .drm.ai   { background: var(--bg-subtle); border-left-color: var(--color-primary); border-radius: var(--radius-sm); }
+.aim.usr, .drm.usr { background: var(--color-primary-weak); color: var(--color-primary); border-right-color: var(--color-primary); border-radius: var(--radius-sm); }
+.aisend, .drsb     { background: var(--color-primary); border-radius: var(--radius-sm); }
+.aisend:hover, .drsb:hover { background: var(--color-primary-hover); }
+.fabbtn  { background: var(--color-primary); box-shadow: 0 10px 24px rgba(43, 110, 221, .28); }
+.drawer  { border-color: var(--border-base); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.drh     { background: var(--color-primary-weak); border-bottom-color: var(--border-base); color: var(--color-primary); }
+
+/* ── ⑬ 图表条 ───────────────────────────────────────────────────────── */
+.btrack { background: var(--bg-sunken); border-radius: var(--radius-pill); }
+.bfill  { background: var(--color-primary); border-radius: var(--radius-pill); }
+
+/* ── ⑭ 滚动条 ───────────────────────────────────────────────────────── */
+.content::-webkit-scrollbar,
+.sktw::-webkit-scrollbar,
+.sklib::-webkit-scrollbar,
+.canvas::-webkit-scrollbar,
+.aich::-webkit-scrollbar { width: 8px; height: 8px; }
+.content::-webkit-scrollbar-thumb,
+.sktw::-webkit-scrollbar-thumb,
+.sklib::-webkit-scrollbar-thumb,
+.canvas::-webkit-scrollbar-thumb,
+.aich::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb); border-radius: var(--radius-pill);
+  border: 2px solid transparent; background-clip: content-box;
+}
+
+/* ── ⑮ 焦点可见性 ───────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-xs); }

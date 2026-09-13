@@ -1,10 +1,16 @@
 <script setup>
+import { getAppBaseUrl } from '@/utils/htmlReport.js';
+
 defineProps({
   status: {
     type: String,
     default: 'done'
   }
 });
+
+// 嵌套路由（/main/analysis/report）下 './' 会解析到路由所在目录导致 404，
+// 且应用可能部署在子路径（/activity/）下，统一按部署 base 解析为绝对 URL。
+const doneIconUrl = `${getAppBaseUrl()}analysis-complete-icon.png`;
 </script>
 
 <template>
@@ -34,7 +40,7 @@ defineProps({
     <template v-else>
       <image
         class="thinking-status-icon__asset"
-        :href="'./analysis-complete-icon.png'"
+        :href="doneIconUrl"
         x="-5"
         y="-2"
         width="46"
