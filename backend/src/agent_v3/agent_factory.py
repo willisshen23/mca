@@ -77,6 +77,12 @@ async def get_v3_agent() -> ReActAgent:
             Runner.resource_mgr.add_tool(t)
             agent.ability_manager.add(t.card)
         await agent.register_rail(ApprovalEditRail(tool_names=sorted(WRITE_TOOLS)))
+        # generate_report 条件审批：已有报告时重新生成会覆盖当前报告，须用户确认；
+        # 首次生成（报告页首条消息）无报告可覆盖，rail 自动放行，不破坏原有流程。
+        await agent.register_rail(ApprovalEditRail(
+            tool_names=["generate_report"],
+            require_existing_report=True,
+        ))
         # 幻觉工具拦截须先于 ToolCallLimitRail：被拦截的调用不执行、不计额度
         await agent.register_rail(
             UnknownToolGuardRail(known_tools=[t.card.name for t in ALL_V3_TOOLS])

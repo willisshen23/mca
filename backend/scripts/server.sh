@@ -104,6 +104,9 @@ load_env() {
     HOST="${HOST:-$(read_env_value HOST "$DEFAULT_HOST")}"
     PORT="${PORT:-$(read_env_value PORT "$DEFAULT_PORT")}"
     LOG_LEVEL="${LOG_LEVEL:-$(read_env_value LOG_LEVEL "$DEFAULT_LOG_LEVEL")}"
+    # uvicorn --log-level 只接受小写（critical/error/warning/info/debug/trace），
+    # 而 .env 里 LOG_LEVEL 按 Python logging 惯例写成大写 INFO
+    LOG_LEVEL="$(printf '%s' "$LOG_LEVEL" | tr '[:upper:]' '[:lower:]')"
 }
 
 find_python() {
@@ -149,7 +152,21 @@ install_deps_if_needed() {
     # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
 
+    # wheels/ 离线包目录按目标平台构建（如 Linux aarch64 靶机）；平台不匹配时
+    # --no-index 会报 "No matching distribution"，回落在线安装
+    local use_offline=false
     if [ -d "$BACKEND_DIR/wheels" ] && ls "$BACKEND_DIR/wheels"/*.whl >/dev/null 2>&1; then
+        local os_tag=""
+        case "$(uname -s)" in
+            Linux)  os_tag="manylinux" ;;
+            Darwin) os_tag="macosx" ;;
+        esac
+        if [ -n "$os_tag" ] && ls "$BACKEND_DIR/wheels"/*"$os_tag"*.whl >/dev/null 2>&1; then
+            use_offline=true
+        fi
+    fi
+
+    if [ "$use_offline" = "true" ]; then
         pip install --no-index --find-links="$BACKEND_DIR/wheels" -r "$BACKEND_DIR/requirements.txt"
     else
         pip install -r "$BACKEND_DIR/requirements.txt"

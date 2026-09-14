@@ -110,6 +110,30 @@ async def search_activities(
     )
 
 
+async def query_activity_by_id(activity_id: str, request) -> tuple[dict | None, str]:
+    """回源按编号查询单个活动：actName 查询 + activity_id 精确匹配（防模糊命中）。
+    返回 (活动快照, 错误信息)；命中时错误信息为空。"""
+    try:
+        params = {"actName": activity_id}
+        if request.user_id:
+            params["userNo"] = request.user_id
+        if request.src_sys_no:
+            params["srcSysNo"] = request.src_sys_no
+        result = await asyncio.to_thread(fetch_activity_list, params)
+    except Exception as exc:
+        return None, f"活动详情查询接口异常：{summarize(str(exc), 120)}"
+
+    if not result.success:
+        return None, f"活动详情查询接口返回失败：{summarize(result.error, 120)}"
+
+    for item in result.data if isinstance(result.data, list) else []:
+        if isinstance(item, dict):
+            compact = compact_activity(item)
+            if compact["activity_id"] == activity_id:
+                return compact, ""
+    return None, f"未找到活动 {activity_id}，请先用 search_activities 查询核实"
+
+
 async def get_activity_detail(ctx: ToolContext, activity_id: str) -> str:
     """查看单个活动的详细信息。优先使用最近查询结果，未命中则回源查询。"""
     activity_id = (activity_id or "").strip()
@@ -121,24 +145,7 @@ async def get_activity_detail(ctx: ToolContext, activity_id: str) -> str:
         if isinstance(item, dict) and activity_key(item) == activity_id:
             return ok_content({"activity": item, "source": "recent_search"})
 
-    try:
-        params = {"actName": activity_id}
-        request = ctx.request
-        if request.user_id:
-            params["userNo"] = request.user_id
-        if request.src_sys_no:
-            params["srcSysNo"] = request.src_sys_no
-        result = await asyncio.to_thread(fetch_activity_list, params)
-    except Exception as exc:
-        return error_content(f"活动详情查询接口异常：{summarize(str(exc), 120)}")
-
-    if not result.success:
-        return error_content(f"活动详情查询接口返回失败：{summarize(result.error, 120)}")
-
-    for item in result.data if isinstance(result.data, list) else []:
-        if isinstance(item, dict):
-            compact = compact_activity(item)
-            if compact["activity_id"] == activity_id:
-                return ok_content({"activity": compact, "source": "bank_api"})
-
-    return error_content(f"未找到活动 {activity_id}，请先用 search_activities 查询核实")
+    activity, error = await query_activity_by_id(activity_id, ctx.request)
+    if activity is not None:
+        return ok_content({"activity": activity, "source": "bank_api"})
+    return error_content(error)

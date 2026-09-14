@@ -7,7 +7,7 @@ export const REPORT_SESSION_KEY = 'report_page_session';
 export const MAX_SELECTED_ACTIVITIES = 5;
 
 // 画布默认加载的分析组件（按名称从 SKILL 库中匹配，顺序即画布顺序）
-export const DEFAULT_CANVAS_SKILL_NAMES = ['北极星指标分析', '活动整体概况分析', '多维分析'];
+export const DEFAULT_CANVAS_SKILL_NAMES = ['核心指标分析', '活动整体概况分析', '多维分析'];
 
 const state = reactive({
   currentType: 'online',

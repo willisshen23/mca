@@ -55,9 +55,11 @@ snapshot() {
     local db name
     for name in skills.db v3_checkpoints.db; do
         db="$DATA_DIR/$name"
+        # 同时清掉残留的 WAL 副产物（手动 cp 活体库会留下它们；
+        # 种子必须来自 sqlite3 .backup，直接 cp 的库可能不一致）
+        rm -f "$SEED_DIR/$name" "$SEED_DIR/$name-shm" "$SEED_DIR/$name-wal"
         if [ -f "$db" ]; then
             echo "快照数据库: $name"
-            rm -f "$SEED_DIR/$name"
             sqlite3 "$db" ".backup '$SEED_DIR/$name'"
         else
             echo "警告: $db 不存在，跳过（目标机将自动创建空库）" >&2

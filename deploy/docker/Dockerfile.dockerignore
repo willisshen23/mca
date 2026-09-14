@@ -2,20 +2,33 @@
 .idea
 .vscode
 .venv
+**/venv
+**/.venv
 **/__pycache__
 **/*.py[cod]
 **/.pytest_cache
 **/node_modules
+.pptxgen
+.playwright-mcp
 mock/tests
 frontend/dist
 backend/.env
 backend/data
+backend/logs
+# 本机离线 pip 安装缓存，镜像内 pip 从索引安装，无需带入
+backend/wheels
 # LLM 主密钥文件：严禁进入构建上下文（Docker daemon 可见）
 backend/data/secrets
 deploy/docker/secrets
 backend/src/infrastructure/static
 deploy/docker/.env
 deploy/docker/runtime-data
+# 构建产物/历史出包：无需进入构建上下文（*.tar.gz 不跨目录，必须 **/ 前缀）
 offline-bundle
-*.tar.gz
+offline-dist/
+offline-v3/
+docker-image/
+**/*.tar.gz
+**/*.zip
 *.log
+logs/

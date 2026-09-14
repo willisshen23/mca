@@ -36,7 +36,7 @@ SAMPLE_TABLE_REQUIREMENT = """## OutputFormat:
 SAMPLE_ASCII_CARD = """## InputFormat:
 - 有效通话客户指通话时长大于30秒的客户，购买金额大于100万为高价值购买。
 ## 输出示例
-## 一、北极星指标概览（数字卡片）
+## 一、核心指标概览（数字卡片）
 ### 业务指标卡片
 ┌──────────────────────────────┐
 │ 零售价值客户AUM (活动期间)      │
@@ -77,7 +77,7 @@ def test_example_prose_numbers_are_masked() -> None:
     assert "8.2" not in result
     assert "85,320" not in result
     # 结构标题保留
-    assert "北极星指标概览" in result
+    assert "核心指标概览" in result
     assert "活动触达客户人数" in result
 
 

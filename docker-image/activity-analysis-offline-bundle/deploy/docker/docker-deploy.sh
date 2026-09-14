@@ -124,9 +124,9 @@ case "$ACTION" in
     up|up-no-build)
         echo "使用 Compose 命令: ${COMPOSE_COMMAND[*]}"
         if [ "$ACTION" = "up-no-build" ]; then
-            # 离线/内网环境：镜像已通过 docker load 导入，跳过 --build，
-            # 避免 BuildKit 联网拉取基础镜像与 dockerfile 解析器。
-            run_compose up -d
+            # 离线/内网环境：镜像已通过 docker load 导入，--no-build 确保
+            # 镜像缺失时直接报错，而不是触发 BuildKit 联网拉取基础镜像。
+            run_compose up -d --no-build
         else
             run_compose up -d --build
         fi

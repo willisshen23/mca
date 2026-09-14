@@ -889,11 +889,25 @@ bash scripts/server.sh restart
 ### 8.2 Docker 部署
 
 ```bash
-# 状态 / 日志 / 重启 / 停止
+# 状态 / 日志 / 重启
 bash deploy/docker/docker-deploy.sh status
 bash deploy/docker/docker-deploy.sh logs
 bash deploy/docker/docker-deploy.sh restart
+
+# 暂停服务（保留容器与数据，秒级恢复）
+cd deploy/docker
+docker compose --env-file ../../backend/.env \
+    -p activity-analysis -f docker-compose.yml stop
+# 恢复启动（暂停后）
+docker compose --env-file ../../backend/.env \
+    -p activity-analysis -f docker-compose.yml start
+# 也可直接按容器名操作：docker stop/start activity-analysis activity-analysis-mock
+
+# 彻底停止（删除容器与网络，数据保留在 runtime-data/）
 bash deploy/docker/docker-deploy.sh down
+
+# 重新拉起（离线/内网环境用 up-no-build，跳过联网构建）
+bash deploy/docker/docker-deploy.sh up
 
 # 单独查看 Mock 日志
 cd deploy/docker
@@ -901,10 +915,16 @@ docker compose --env-file ../../backend/.env \
     -p activity-analysis -f docker-compose.yml logs -f mock
 ```
 
-Windows 将命令替换为 `.\deploy\docker\docker-deploy.ps1 <action>`。
+Windows 将命令替换为 `.\deploy\docker\docker-deploy.ps1 <action>`
+（支持 up / down / restart / logs / status）；上面的 `docker compose`
+命令各平台通用。
 
-容器已配置 `restart: unless-stopped` 与 `/health` 健康检查，
-异常退出会自动拉起；`docker-deploy.sh status` 可看到 health 状态。
+**服务器重启后无需人工干预**：两个容器均配置 `restart: unless-stopped`，
+Docker 服务随系统启动后容器会自动恢复运行；被手动 `stop`/`down` 的除外，
+需执行上面的 `start` 或 `up`（离线环境用 `up-no-build`）手动拉起。
+
+容器还配置了 `/activity/health` 健康检查，异常退出会自动拉起；
+`docker-deploy.sh status` 可看到 health 状态。
 
 ## 9. 数据与备份
 

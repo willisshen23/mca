@@ -55,6 +55,15 @@ def setup_function():
     v3_sessions.reset_sessions()
 
 
+@pytest.fixture(autouse=True)
+def _no_llm_wording(monkeypatch):
+    """默认桩掉审批话术 LLM 调用（返回空串 = 回退模板文案），避免测试走网络。"""
+    async def _empty(**_kwargs):
+        return ""
+
+    monkeypatch.setattr(v3_bridge, "generate_approval_wording", _empty)
+
+
 async def test_error_answer_raises_instead_of_silent_success():
     """框架 stream_process 吞异常后以 answer 帧下发 {"output": str(e), "result_type": "error"}。
     bridge 必须抛出（走 runtime 失败路径：turn 记 failed + 前端 error 帧），
@@ -107,6 +116,86 @@ async def test_interaction_to_approval_and_pending():
     assert v3_sessions.get_pending_interrupt("t1") == "int-1"
     done = frames[-1]
     assert done["payload"]["awaiting_approval"] is True
+
+
+def test_approval_frame_resolves_activity_names_for_generate_report():
+    """generate_report 审批卡片需要可读的活动名称/行号（不再只展示原始
+    activity_ids）：名称优先取最近查询快照；报告页"追加活动"场景下原报告的
+    活动不在快照里，用当前报告 data_snapshot 兜底。"""
+    from openjiuwen.core.session.interaction.interaction import InteractionOutput
+    from openjiuwen.core.single_agent.interrupt.response import ToolCallInterruptRequest
+
+    state = {
+        "activity_list": [{"activity_id": "A1", "name": "新活动", "row_number": 3}],
+        "report_context": {"data_snapshot": {"activity_ids": ["A0"],
+                                             "activity_names": ["旧活动"]}},
+    }
+    v3_sessions._sessions["t1"] = SimpleNamespace(get_state=lambda key: state.get(key))
+    interaction_payload = InteractionOutput(
+        id="int-2",
+        value=ToolCallInterruptRequest(
+            message="请确认是否执行「生成分析报告」",
+            tool_name="generate_report",
+            tool_call_id="call-2",
+            tool_args={"activity_ids": ["A0", "A1", "A9"], "data_source": "activity_query"},
+        ),
+    )
+    frame = _parse(v3_bridge.interaction_to_approval_frame(interaction_payload, "t1"))
+    assert frame["payload"]["activities"] == [
+        {"activity_id": "A0", "name": "旧活动", "row_number": None},
+        {"activity_id": "A1", "name": "新活动", "row_number": 3},
+        # 快照与报告快照都未命中时退化为编号本身
+        {"activity_id": "A9", "name": "A9", "row_number": None},
+    ]
+
+
+def _make_interaction(tool="modify_report", args=None, message="请确认"):
+    from openjiuwen.core.session.interaction.interaction import InteractionOutput
+    from openjiuwen.core.single_agent.interrupt.response import ToolCallInterruptRequest
+
+    return InteractionOutput(
+        id="int-w",
+        value=ToolCallInterruptRequest(
+            message=message, tool_name=tool, tool_call_id="call-w",
+            tool_args=args or {},
+        ),
+    )
+
+
+async def test_approval_frame_uses_llm_wording(monkeypatch):
+    """LLM 话术成功时替换审批副标题（description），正文活动列表不受影响。"""
+    async def _wording(**kwargs):
+        assert kwargs["tool_display"] == "修改报告"
+        return "我将按你要求把报告标题改得更简洁，确认后立即生效"
+
+    monkeypatch.setattr(v3_bridge, "generate_approval_wording", _wording)
+    frames = await _collect([_out("__interaction__", _make_interaction(
+        args={"free_instruction": "标题改简洁"}, message="请确认是否执行「修改报告」"))])
+    approval = frames[0]
+    assert approval["payload"]["description"] == "我将按你要求把报告标题改得更简洁，确认后立即生效"
+    assert approval["payload"]["display_name"] == "修改报告"
+
+
+async def test_approval_frame_falls_back_when_wording_fails(monkeypatch):
+    """话术 LLM 调用异常时回退模板文案，弹窗照常下发。"""
+    async def _boom(**_kwargs):
+        raise RuntimeError("模型不可用")
+
+    monkeypatch.setattr(v3_bridge, "generate_approval_wording", _boom)
+    frames = await _collect([_out("__interaction__", _make_interaction(
+        message="请确认是否执行「修改报告」"))])
+    assert frames[0]["payload"]["description"] == "请确认是否执行「修改报告」"
+
+
+async def test_approval_frame_falls_back_when_wording_empty(monkeypatch):
+    """话术返回空串（输出不合格）同样回退模板文案。"""
+    async def _empty(**_kwargs):
+        return ""
+
+    monkeypatch.setattr(v3_bridge, "generate_approval_wording", _empty)
+    frames = await _collect([_out("__interaction__", _make_interaction(
+        message="请确认是否执行「修改报告」"))])
+    assert frames[0]["payload"]["description"] == "请确认是否执行「修改报告」"
 
 
 async def test_custom_tool_progress_and_state_update():

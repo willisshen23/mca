@@ -4,7 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.agent_v3.rails import ToolCallLimitRail, ToolProgressRail, UnknownToolGuardRail
+from src.agent_v3.rails import (
+    ApprovalEditRail,
+    ToolCallLimitRail,
+    ToolProgressRail,
+    UnknownToolGuardRail,
+)
 
 _KNOWN_TOOLS = ("search_activities", "get_available_templates", "generate_report")
 
@@ -25,11 +30,12 @@ class _FakeSession:
         self.custom_frames.append(data)
 
 
-def _tool_ctx(tool_name, session=None, tool_args=None, tool_result=None):
+def _tool_ctx(tool_name, session=None, tool_args=None, tool_result=None, exception=None):
     tool_call = SimpleNamespace(id="call-1")
     return SimpleNamespace(
         extra={},
         session=session,
+        exception=exception,
         inputs=SimpleNamespace(
             tool_name=tool_name,
             tool_args=tool_args or {},
@@ -180,6 +186,62 @@ async def test_progress_rail_emits_guard_result_after_report_tools():
     state_frames = [f for f in session.custom_frames if f.get("activity-analysis") == "state_update"]
     assert state_frames
     assert state_frames[0]["data"]["report_html_guard_result"] == {"valid": True}
+
+
+# ── 审批中断/拒绝时工具未执行，不得发"完成"帧、不得透传 state ──
+# 背景：openjiuwen @rail 装饰器在 finally 里无条件触发 AFTER_TOOL_CALL，
+# 即使 before 阶段被 ApprovalEditRail 抛中断（工具从未执行）。若照常发
+# modify_report 的 done 帧并透传残留的 report_html_guard_result，
+# sse_bridge 会把本轮标记为 report_updated，done 帧带上旧 html_report，
+# 前端在审批通过前/拒绝后就输出"报告已生成"旧版卡片。
+
+async def test_progress_rail_skips_frames_when_tool_interrupted():
+    """审批中断（before 抛 AbortError，after 在 finally 中仍触发，ctx.exception 非空）：
+    工具未执行，after_tool_call 不得发任何帧。"""
+    session = _FakeSession({"report_html_guard_result": {"valid": True},
+                            "report_context": {"report_id": "r1"}})
+    rail = ToolProgressRail()
+    ctx = _tool_ctx("modify_report", session, exception=RuntimeError("interrupted"))
+    await rail.after_tool_call(ctx)
+    assert session.custom_frames == []
+
+
+async def test_progress_rail_skips_frames_when_approval_rejected():
+    """审批拒绝（before 正常返回但置 _skip_tool + 拒绝标记，工具未执行）：
+    before 不发 running 帧，after 不发 done 帧、不透传 state。"""
+    session = _FakeSession({"report_html_guard_result": {"valid": True}})
+    approval = ApprovalEditRail(tool_names=["modify_report"])
+    progress = ToolProgressRail()
+    ctx = _tool_ctx("modify_report", session)
+    decision = await approval.resolve_interrupt(
+        ctx, ctx.inputs.tool_call, {"decision": "reject", "message": "不用改了"})
+    approval._apply_decision(ctx, ctx.inputs.tool_call, "modify_report", decision)
+    assert ctx.extra["_skip_tool"] is True
+    await progress.before_tool_call(ctx)
+    # 框架 fn 主体会 pop("_skip_tool")，after 时该键已不存在
+    ctx.extra.pop("_skip_tool", None)
+    await progress.after_tool_call(ctx)
+    assert session.custom_frames == []
+
+
+async def test_progress_rail_still_emits_after_approved_modify():
+    """审批通过后 modify_report 真正执行：after 照常发 done 帧并透传 guard 结果
+    （中断轮的标记/异常不得泄漏到恢复执行轮）。"""
+    session = _FakeSession({"report_html_guard_result": {"valid": True}})
+    approval = ApprovalEditRail(tool_names=["modify_report"])
+    progress = ToolProgressRail()
+    # 恢复轮：decision=approve，无标记、无异常
+    ctx = _tool_ctx("modify_report", session)
+    decision = await approval.resolve_interrupt(
+        ctx, ctx.inputs.tool_call, {"decision": "approve"})
+    approval._apply_decision(ctx, ctx.inputs.tool_call, "modify_report", decision)
+    await progress.before_tool_call(ctx)
+    ctx.inputs.tool_result = '{"status":"ok"}'
+    await progress.after_tool_call(ctx)
+    kinds = [f.get("activity-analysis") for f in session.custom_frames]
+    assert kinds == ["tool_progress", "tool_progress", "state_update"]
+    assert session.custom_frames[1]["status"] == "done"
+    assert session.custom_frames[2]["data"]["report_html_guard_result"] == {"valid": True}
 
 
 # ── UnknownToolGuardRail：幻觉工具拦截 ──

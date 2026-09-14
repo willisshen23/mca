@@ -98,14 +98,14 @@ class PipelineAbort(Exception):
 
 # ── Step A：活动解析 ──
 
-def _resolve_activities(state: dict, args: GenerateReportArgs) -> tuple[list[dict], str]:
-    """返回 (活动快照列表, 错误信息)。错误信息非空则列表无效。"""
+def _resolve_activities(state: dict, args: GenerateReportArgs) -> tuple[list[dict], list[str], str]:
+    """返回 (快照命中列表, 未命中编号列表, 错误信息)。错误信息非空则前两者无效。"""
     if args.data_source == "uploaded":
         dataset = state.get("uploaded_activity_dataset") or {}
         activities = dataset.get("activities") or []
         if not activities:
-            return [], "上传数据尚未解析，请先调用 parse_uploaded_data"
-        return activities, ""
+            return [], [], "上传数据尚未解析，请先调用 parse_uploaded_data"
+        return activities, [], ""
 
     if args.activity_ids:
         wanted = [str(aid).strip() for aid in args.activity_ids if str(aid).strip()]
@@ -128,19 +128,53 @@ def _resolve_activities(state: dict, args: GenerateReportArgs) -> tuple[list[dic
                 resolved.append(queue_index[aid])
             else:
                 missing.append(aid)
-        if not resolved:
-            return [], (
-                f"活动 {', '.join(missing)} 不在最近查询结果中，"
-                "请先调用 search_activities 查询核实后再生成报告"
-            )
-        if missing:
-            logger.info("generate_report 部分活动未命中快照，已忽略: %s", missing)
-        return resolved, ""
+        return resolved, missing, ""
 
     queue = [item for item in (state.get("analysis_queue") or []) if isinstance(item, dict)]
     if queue:
-        return queue, ""
-    return [], "没有可分析的活动：分析队列为空，且未指定 activity_ids。请先 search_activities 查询并确认要分析的活动"
+        return queue, [], ""
+    return [], [], "没有可分析的活动：分析队列为空，且未指定 activity_ids。请先 search_activities 查询并确认要分析的活动"
+
+
+async def _backfill_missing_activities(missing: list[str], ctx: ToolContext) -> dict[str, dict]:
+    """快照/队列未命中的活动编号回源补齐（query_activity_by_id 同款精确匹配）。
+
+    追加活动场景：模型传入"旧活动 + 新活动"完整编号，旧活动却不在最近一次
+    搜索快照里（activity_list 只保留最近一次查询结果）。若直接报错，模型要
+    重新 search_activities 核实再调 generate_report——多一轮工具调用的同时，
+    已有报告时会再多弹一次覆盖审批（联调实测用户被迫确认两次）。
+    """
+    from src.agent_v3.tools.impl.activity_query import query_activity_by_id
+
+    fetched: dict[str, dict] = {}
+    for aid in missing:
+        activity, error = await query_activity_by_id(aid, ctx.request)
+        if activity is not None:
+            fetched[aid] = activity
+        else:
+            logger.info("generate_report 回源补齐未命中: %s (%s)", aid, error)
+    return fetched
+
+
+async def _resolve_activities_with_backfill(
+    state: dict, args: GenerateReportArgs, ctx: ToolContext
+) -> tuple[list[dict], str]:
+    """快照解析 + 未命中回源补齐，返回 (活动快照列表, 错误信息)。"""
+    activities, missing, error = _resolve_activities(state, args)
+    if error or not missing:
+        return activities, error
+    fetched = await _backfill_missing_activities(missing, ctx)
+    still_missing = [aid for aid in missing if aid not in fetched]
+    if still_missing:
+        return [], (
+            f"活动 {', '.join(still_missing)} 未查询到，"
+            "请先用 search_activities 核实活动编号后再生成报告"
+        )
+    # 按模型传入的编号顺序合并（回源补齐的只是数据来源不同，语义等价快照命中）
+    wanted = [str(aid).strip() for aid in (args.activity_ids or []) if str(aid).strip()]
+    by_id = {activity_key(a): a for a in activities}
+    by_id.update(fetched)
+    return [by_id[aid] for aid in wanted if aid in by_id], ""
 
 
 OUTBOUND_PERSPECTIVE_KEY = "outbound_call_analysis"
@@ -698,7 +732,7 @@ async def generate_report(
 
     state = ctx.state
 
-    activities, error = _resolve_activities(state, args)
+    activities, error = await _resolve_activities_with_backfill(state, args, ctx)
     if error:
         return error_content(error)
 

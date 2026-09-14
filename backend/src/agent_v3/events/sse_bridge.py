@@ -10,9 +10,10 @@ from openjiuwen.core.runner import Runner
 from openjiuwen.core.session.stream.base import BaseStreamMode, CustomSchema, OutputSchema
 
 from src.agent_v3.events._frames import (
-    _compact_report_context, _export_artifact, _frame,
+    _args_summary, _compact_report_context, _export_artifact, _frame,
     pipeline_step_frame, tool_progress_frame,
 )
+from src.agent_v3.approval_wording import generate_approval_wording
 from src.agent_v3.tools import TOOL_DISPLAY_NAMES
 from src.agent_v3.tools.impl.common import activity_key, activity_name
 from src.agent_v3 import sessions as v3_sessions
@@ -30,8 +31,8 @@ def _llm_content(payload: Any) -> str:
     return ""
 
 
-def interaction_to_approval_frame(payload: Any, thread_id: str) -> str:
-    """__interaction__ 帧 payload → approval_required SSE 帧（对齐 v2 帧结构）。
+def _interaction_to_approval_message(payload: Any, thread_id: str) -> dict:
+    """__interaction__ 帧 payload → approval_required 消息（对齐 v2 帧结构）。
 
     真实帧结构（handler.build_interrupt_result 源码确认）：
     OutputSchema.payload = InteractionOutput(id=<interrupt_id>, value=ToolCallInterruptRequest)
@@ -51,13 +52,21 @@ def interaction_to_approval_frame(payload: Any, thread_id: str) -> str:
         except (TypeError, ValueError):
             args = {}
     activities = []
-    if tool == "add_to_analysis_queue":
-        ids = args.get("activity_ids") or []
+    ids = args.get("activity_ids") or []
+    if ids:
+        # 审批卡片需要可读的活动名称/行号：优先最近查询快照；报告页"追加活动"
+        # 场景下原报告的活动不一定在快照里，用当前报告的 data_snapshot 兜底。
+        state = v3_sessions.read_business_state(thread_id)
         by_id = {
             activity_key(item): item
-            for item in v3_sessions.read_business_state(thread_id)["activity_list"]
+            for item in state["activity_list"]
             if isinstance(item, dict)
         }
+        snapshot = (state.get("report_context") or {}).get("data_snapshot") or {}
+        for aid, name in zip(snapshot.get("activity_ids") or [],
+                             snapshot.get("activity_names") or []):
+            if aid and str(aid) not in by_id:
+                by_id[str(aid)] = {"activity_id": str(aid), "name": name}
         activities = [
             {
                 "activity_id": aid,
@@ -77,6 +86,37 @@ def interaction_to_approval_frame(payload: Any, thread_id: str) -> str:
             "activities": activities,
         },
     }
+    return message
+
+
+def interaction_to_approval_frame(payload: Any, thread_id: str) -> str:
+    return _frame(_interaction_to_approval_message(payload, thread_id))
+
+
+#: 审批话术 LLM 调用超时（秒）：超时/失败回退模板文案，弹窗不被阻塞
+_WORDING_TIMEOUT_S = 5.0
+
+
+async def _approval_frame_with_wording(payload: Any, thread_id: str) -> str:
+    """审批帧 + LLM 确认话术：话术替换副标题（description），
+    正文（活动列表/参数）保持确定性渲染。"""
+    message = _interaction_to_approval_message(payload, thread_id)
+    frame_payload = message["payload"]
+    try:
+        wording = await asyncio.wait_for(
+            generate_approval_wording(
+                tool_display=frame_payload["display_name"],
+                args_summary=_args_summary(frame_payload["args"]),
+                activity_names=[a["name"] for a in frame_payload["activities"]],
+                overwrite=(frame_payload["tool"] == "generate_report" and bool(
+                    v3_sessions.read_business_state(thread_id).get("html_report"))),
+            ),
+            timeout=_WORDING_TIMEOUT_S,
+        )
+    except Exception:
+        wording = ""
+    if wording:
+        frame_payload["description"] = wording
     return _frame(message)
 
 
@@ -205,7 +245,7 @@ async def stream_v3_events(
                 interrupt_id = str(getattr(chunk.payload, "id", "") or "")
                 if interrupt_id:
                     v3_sessions.set_pending_interrupt(thread_id, interrupt_id)
-                yield interaction_to_approval_frame(chunk.payload, thread_id)
+                yield await _approval_frame_with_wording(chunk.payload, thread_id)
             # llm_reasoning / llm_usage / tracer_*：忽略
     finally:
         pump.cancel()

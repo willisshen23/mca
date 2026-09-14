@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mock:
     build:
@@ -33,7 +31,8 @@ services:
     container_name: activity-analysis
     restart: unless-stopped
     depends_on:
-      - mock
+      mock:
+        condition: service_healthy
     env_file:
       - ../../backend/.env
     environment:
@@ -51,6 +50,8 @@ services:
       LOG_DIR: /app/backend/data/logs
       HOST: 0.0.0.0
       PORT: "8000"
+      # AuthSDK 鉴权服务上游：/authApi/* 由后端反向代理到该地址
+      AUTH_SERVICE_BASE_URL: "${AUTH_SERVICE_BASE_URL:-http://1.95.124.163:5003}"
       # LLM API Key 密文解密主密钥（可选）：backend/.env 含 enc:v1: 密文时必须提供。
       # 由宿主机环境变量注入（勿写入 backend/.env 与密文同文件）；
       # 未设置时若配置为密文，应用启动会 fail-fast 报 MasterKeyMissingError。
@@ -64,7 +65,7 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/activity/health', timeout=3)"
       interval: 15s
       timeout: 5s
       retries: 10

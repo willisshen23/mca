@@ -78,6 +78,57 @@ def test_seed_period_uses_t_minus_2_when_activity_ongoing():
     assert seed["marketing_intent"]["period"] == {"start_date": "2026-04-01", "end_date": "2026-07-19"}
 
 
+def test_resolve_activities_reports_missing_ids():
+    """快照只保留最近一次查询结果，"旧活动 + 新活动"完整编号中旧活动未命中时，
+    返回未命中列表交由回源补齐（不得静默忽略，否则生成范围残缺的报告）。"""
+    state = {"activity_list": [_activities()[1]]}  # 快照里只有 act_002
+    args = GenerateReportArgs(activity_ids=["act_001", "act_002"], data_source="activity_query")
+    activities, missing, error = rg._resolve_activities(state, args)
+    assert error == ""
+    assert activities == [_activities()[1]]
+    assert missing == ["act_001"]
+
+
+def test_resolve_activities_all_hit_still_works():
+    state = {"activity_list": _activities()}
+    args = GenerateReportArgs(activity_ids=["act_001", "act_002"], data_source="activity_query")
+    activities, missing, error = rg._resolve_activities(state, args)
+    assert error == "" and missing == []
+    assert len(activities) == 2
+
+
+async def test_resolve_with_backfill_fetches_missing_from_api(monkeypatch):
+    """快照未命中的编号自动回源补齐：一次 generate_report 调用即可成功，
+    模型无需重新 search 再调用（已有报告时会因此只弹一次覆盖审批）。"""
+    async def fake_query(activity_id, request):
+        assert activity_id == "act_001"
+        return _activities()[0], ""
+
+    monkeypatch.setattr(
+        "src.agent_v3.tools.impl.activity_query.query_activity_by_id", fake_query)
+    state = {"activity_list": [_activities()[1]]}
+    args = GenerateReportArgs(activity_ids=["act_001", "act_002"], data_source="activity_query")
+    activities, error = await rg._resolve_activities_with_backfill(state, args, _ctx())
+    assert error == ""
+    # 按模型传入的编号顺序合并
+    assert activities == _activities()
+
+
+async def test_resolve_with_backfill_errors_when_api_misses(monkeypatch):
+    """回源也查不到（编号无效）时才报错，并指明是哪个编号。"""
+    async def fake_query(activity_id, request):
+        return None, f"未找到活动 {activity_id}"
+
+    monkeypatch.setattr(
+        "src.agent_v3.tools.impl.activity_query.query_activity_by_id", fake_query)
+    state = {"activity_list": [_activities()[1]]}
+    args = GenerateReportArgs(activity_ids=["act_001", "act_002"], data_source="activity_query")
+    activities, error = await rg._resolve_activities_with_backfill(state, args, _ctx())
+    assert activities == []
+    assert "act_001" in error
+    assert "act_002" not in error
+
+
 def test_seed_messages_is_single_user_message():
     args = GenerateReportArgs(
         activity_ids=["act_001"],

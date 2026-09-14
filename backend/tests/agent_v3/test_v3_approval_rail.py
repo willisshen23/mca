@@ -76,3 +76,67 @@ async def test_interrupt_message_falls_back_when_tool_call_is_none():
     decision = await rail.resolve_interrupt(_ctx(), None, None, None)
     assert isinstance(decision, InterruptResult)
     assert decision.request.message == "请确认是否执行该操作"
+
+
+# ── generate_report 条件审批：已有报告时重新生成会覆盖当前报告，须审批 ──
+
+class _FakeSession:
+    def __init__(self, state=None):
+        self._state = state or {}
+
+    def get_state(self, key=None):
+        return self._state.get(key)
+
+
+def _gen_ctx(html_report=""):
+    return SimpleNamespace(extra={}, session=_FakeSession({"html_report": html_report}))
+
+
+def _gen_tool_call():
+    return ToolCall(id="call-2", type="function", name="generate_report",
+                    arguments='{"activity_ids":["A1","A2"]}', index=0)
+
+
+async def test_generate_report_first_generation_auto_approves():
+    """会话中尚无报告（首次生成）时不打断——报告页首条消息自动生成流程不变。"""
+    rail = ApprovalEditRail(tool_names=["generate_report"], require_existing_report=True)
+    decision = await rail.resolve_interrupt(_gen_ctx(html_report=""), _gen_tool_call(), None, None)
+    assert isinstance(decision, ApproveResult)
+
+
+async def test_generate_report_with_existing_report_interrupts():
+    """已有报告时重新生成会覆盖当前报告，必须弹审批。"""
+    rail = ApprovalEditRail(tool_names=["generate_report"], require_existing_report=True)
+    decision = await rail.resolve_interrupt(_gen_ctx(html_report="<html>旧报告</html>"),
+                                            _gen_tool_call(), None, None)
+    assert isinstance(decision, InterruptResult)
+
+
+async def test_generate_report_resume_approve_runs():
+    rail = ApprovalEditRail(tool_names=["generate_report"], require_existing_report=True)
+    decision = await rail.resolve_interrupt(_gen_ctx(html_report="<html>旧报告</html>"),
+                                            _gen_tool_call(), {"decision": "approve"}, None)
+    assert isinstance(decision, ApproveResult)
+
+
+async def test_generate_report_overwrite_message_describes_consequence():
+    """覆盖审批文案必须说清后果（覆盖当前报告）与依据（哪些活动），
+    而不是只报工具名。"""
+    rail = ApprovalEditRail(tool_names=["generate_report"], require_existing_report=True)
+    decision = await rail.resolve_interrupt(_gen_ctx(html_report="<html>旧报告</html>"),
+                                            _gen_tool_call(), None, None)
+    assert isinstance(decision, InterruptResult)
+    assert "覆盖当前报告" in decision.request.message
+    assert "以下活动" in decision.request.message
+
+
+async def test_generate_report_overwrite_message_uploaded_source():
+    """上传数据源没有"以下活动"，文案按数据源区分。"""
+    rail = ApprovalEditRail(tool_names=["generate_report"], require_existing_report=True)
+    tool_call = ToolCall(id="call-3", type="function", name="generate_report",
+                         arguments='{"data_source":"uploaded"}', index=0)
+    decision = await rail.resolve_interrupt(_gen_ctx(html_report="<html>旧报告</html>"),
+                                            tool_call, None, None)
+    assert isinstance(decision, InterruptResult)
+    assert "覆盖当前报告" in decision.request.message
+    assert "上传" in decision.request.message

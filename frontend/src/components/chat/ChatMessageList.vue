@@ -157,7 +157,7 @@ function handleMarkdownActivityTableClick(event, message) {
               <span v-if="activityId(activity)" class="activity-preview-id">{{ activityId(activity) }}</span>
             </div>
           </div>
-          <div v-if="!message.activities?.length" class="activity-preview-item approval-description">
+          <div v-if="!message.activities?.length || message.tool === 'generate_report'" class="activity-preview-item approval-description">
             <div class="activity-preview-summary" style="white-space: pre-line;">{{ chat.formatApprovalDescription(message) }}</div>
           </div>
         </div>

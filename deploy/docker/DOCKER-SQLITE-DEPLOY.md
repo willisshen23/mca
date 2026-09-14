@@ -53,7 +53,7 @@ http://服务器IP:9111
 健康检查：
 
 ```text
-http://服务器IP:9111/health
+http://服务器IP:9111/activity/health
 ```
 
 ## 三、修改配置
@@ -132,22 +132,59 @@ Compose 会把 `backend/.env` 注入主应用容器，不再在 Docker 部署目
 Windows：
 
 ```powershell
-.\deploy\docker\docker-deploy.ps1 status
-.\deploy\docker\docker-deploy.ps1 logs
-.\deploy\docker\docker-deploy.ps1 restart
-.\deploy\docker\docker-deploy.ps1 down
+.\deploy\docker\docker-deploy.ps1 status    # 查看状态（含健康检查）
+.\deploy\docker\docker-deploy.ps1 logs      # 跟踪日志
+.\deploy\docker\docker-deploy.ps1 restart   # 重启服务
+.\deploy\docker\docker-deploy.ps1 down      # 停止并删除容器（数据保留）
+.\deploy\docker\docker-deploy.ps1 up        # 启动
 ```
 
 Linux/macOS：
 
 ```bash
-bash deploy/docker/docker-deploy.sh status
-bash deploy/docker/docker-deploy.sh logs
-bash deploy/docker/docker-deploy.sh restart
-bash deploy/docker/docker-deploy.sh down
+bash deploy/docker/docker-deploy.sh status    # 查看状态（含健康检查）
+bash deploy/docker/docker-deploy.sh logs      # 跟踪日志
+bash deploy/docker/docker-deploy.sh restart   # 重启服务
+bash deploy/docker/docker-deploy.sh down      # 停止并删除容器（数据保留）
+bash deploy/docker/docker-deploy.sh up        # 启动（离线环境用 up-no-build）
 ```
 
 `down` 只删除容器和网络，不删除 SQLite 数据。
+
+### 暂停与恢复（不删除容器）
+
+临时暂停服务（如服务器维护、暂停对外提供访问），容器保留、随时秒级恢复：
+
+```bash
+cd deploy/docker
+docker compose --env-file ../../backend/.env -p activity-analysis -f docker-compose.yml stop
+```
+
+恢复启动：
+
+```bash
+cd deploy/docker
+docker compose --env-file ../../backend/.env -p activity-analysis -f docker-compose.yml start
+```
+
+也可以直接按固定容器名操作（效果相同）：
+
+```bash
+docker stop activity-analysis activity-analysis-mock     # 暂停
+docker start activity-analysis activity-analysis-mock    # 恢复
+```
+
+`stop` 与 `down` 的区别：`stop` 只是暂停容器进程，`start` 秒级恢复；
+`down` 删除容器与网络，再用 `up` 重建容器。两种方式**都不会丢失数据**
+（数据在 `deploy/docker/runtime-data/` 卷内）。
+
+### 服务器重启后的行为
+
+两个容器均配置了 `restart: unless-stopped`：**服务器重启后，只要 Docker
+服务随系统自启，容器会自动恢复运行**，无需人工干预。例外：被手动
+`stop` 或 `down` 掉的容器不会自动拉起，需执行上面的 `start` 或
+`docker-deploy.sh up`（离线环境用 `up-no-build`）。恢复后可用
+`docker-deploy.sh status` 确认健康状态。
 
 查看两个容器：
 

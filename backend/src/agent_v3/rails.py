@@ -49,6 +49,11 @@ APPROVAL_PAYLOAD_SCHEMA = {
     "required": ["decision"],
 }
 
+#: 审批拒绝的 tool_call_id 集合（ctx.extra 键）。ApprovalEditRail 记录、
+#: ToolProgressRail 消费：拒绝路径工具未执行（无异常抛出，after 时
+#: _skip_tool 已被框架 pop），只能靠显式标记识别"该调用未真正执行"。
+_APPROVAL_REJECTED_CALL_IDS = "_approval_rejected_call_ids"
+
 
 class ApprovalEditRail(BaseInterruptRail):
     """写工具审批：approve / edit（改写参数）/ reject（feedback 回传模型）。
@@ -57,9 +62,13 @@ class ApprovalEditRail(BaseInterruptRail):
     """
 
     def __init__(self, tool_names: Optional[Iterable[str]] = None,
-                 message: str = "请确认是否执行该操作"):
+                 message: str = "请确认是否执行该操作",
+                 require_existing_report: bool = False):
         super().__init__(tool_names=tool_names)
         self._message = message
+        # True 时仅当会话已有 html_report 才中断（用于 generate_report：
+        # 重新生成会覆盖当前报告须确认；首次生成无报告可覆盖，自动放行）。
+        self._require_existing_report = require_existing_report
 
     async def resolve_interrupt(
             self,
@@ -68,6 +77,11 @@ class ApprovalEditRail(BaseInterruptRail):
             user_input,
             auto_confirm_config: Optional[dict] = None,
     ) -> InterruptDecision:
+        if self._require_existing_report and not isinstance(user_input, dict):
+            session = getattr(ctx, "session", None)
+            existing = session.get_state("html_report") if session is not None else ""
+            if not existing:
+                return self.approve()
         if not isinstance(user_input, dict):
             return self.interrupt(InterruptRequest(
                 message=self._approval_message(tool_call),
@@ -81,6 +95,9 @@ class ApprovalEditRail(BaseInterruptRail):
             return self.approve(new_args=json.dumps(edited_args, ensure_ascii=False))
         if decision == "reject":
             feedback = (user_input.get("message") or "用户拒绝了该操作").strip()
+            tool_call_id = self._resolve_tool_call_id(tool_call)
+            if tool_call_id:
+                ctx.extra.setdefault(_APPROVAL_REJECTED_CALL_IDS, set()).add(tool_call_id)
             return self.reject(tool_result=(
                 f"用户拒绝了本次操作。用户反馈：{feedback}。"
                 "请尊重用户决定，不要再调用该工具，直接用文字回复用户。"
@@ -95,6 +112,12 @@ class ApprovalEditRail(BaseInterruptRail):
         tool_name = getattr(tool_call, "name", "") if tool_call else ""
         if not tool_name:
             return self._message
+        if self._require_existing_report and tool_name == "generate_report":
+            # 该实例只在已有报告时中断，文案必须说清后果（覆盖当前报告）
+            args = _normalize_tool_args(getattr(tool_call, "arguments", None))
+            if args.get("data_source") == "uploaded":
+                return "将基于上传的活动数据文件重新生成分析报告，并覆盖当前报告，请确认"
+            return "将基于以下活动重新生成分析报告，并覆盖当前报告，请确认"
         return f"请确认是否执行「{TOOL_DISPLAY_NAMES.get(tool_name, tool_name)}」"
 
 
@@ -215,6 +238,10 @@ class ToolProgressRail(AgentRail):
     async def before_tool_call(self, ctx) -> None:
         if ctx.inputs.tool_name in self._suppressed or ctx.session is None:
             return
+        if ctx.extra.get("_skip_tool"):
+            # 调用已被更早的 Rail 否决（审批拒绝/幻觉拦截/超限），不会真正执行，
+            # 不发 running 帧（after 的完成帧由 after_tool_call 自行拦截）。
+            return
         await ctx.session.write_custom_stream({
             "activity-analysis": "tool_progress",
             "tool": ctx.inputs.tool_name,
@@ -224,6 +251,22 @@ class ToolProgressRail(AgentRail):
 
     async def after_tool_call(self, ctx) -> None:
         if ctx.session is None:
+            return
+        # 工具未真正执行时不发完成帧、不透传 state：
+        # - 审批中断：ApprovalEditRail 在 before 阶段抛 AbortError，框架 @rail
+        #   装饰器的 finally 仍触发本回调，ctx.exception 非空；
+        # - 审批拒绝：before 阶段正常返回（仅置 _skip_tool），ctx.exception 为空，
+        #   由 ApprovalEditRail 记录的拒绝标记识别（_skip_tool 已被框架 fn pop）。
+        # 否则 modify_report 被审批打断/拒绝时也会发出"done"进度帧并透传残留的
+        # report_html_guard_result，sse_bridge 据此把本轮标记为 report_updated，
+        # done 帧带上旧 html_report——前端在审批完成前就输出"报告已生成"旧版卡片。
+        if getattr(ctx, "exception", None) is not None:
+            return
+        tool_call = getattr(ctx.inputs, "tool_call", None)
+        tool_call_id = getattr(tool_call, "id", "") if tool_call else ""
+        rejected_ids = ctx.extra.get(_APPROVAL_REJECTED_CALL_IDS)
+        if rejected_ids and tool_call_id and tool_call_id in rejected_ids:
+            rejected_ids.discard(tool_call_id)
             return
         if ctx.inputs.tool_name not in self._suppressed:
             await ctx.session.write_custom_stream({

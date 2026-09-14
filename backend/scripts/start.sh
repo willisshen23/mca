@@ -42,12 +42,25 @@ echo ""
 
 # 3. 安装依赖
 echo ">>> [3/6] 安装 Python 依赖..."
+USE_OFFLINE=false
 if [ -d "$BACKEND_DIR/wheels" ] && ls "$BACKEND_DIR/wheels"/*.whl &>/dev/null 2>&1; then
+    # wheels/ 按目标平台构建（如 Linux aarch64 靶机）；平台不匹配时离线安装会
+    # 报 "No matching distribution"，回落在线安装
+    OS_TAG=""
+    case "$(uname -s)" in
+        Linux)  OS_TAG="manylinux" ;;
+        Darwin) OS_TAG="macosx" ;;
+    esac
+    if [ -n "$OS_TAG" ] && ls "$BACKEND_DIR/wheels"/*"$OS_TAG"*.whl &>/dev/null 2>&1; then
+        USE_OFFLINE=true
+    fi
+fi
+if [ "$USE_OFFLINE" = "true" ]; then
     echo "从离线 wheels 安装..."
     pip install --no-index --find-links="$BACKEND_DIR/wheels" \
         -r "$BACKEND_DIR/requirements.txt"
 else
-    echo "wheels 目录为空或不存在，尝试在线安装..."
+    echo "wheels 目录为空、不存在或平台不匹配，尝试在线安装..."
     pip install -r "$BACKEND_DIR/requirements.txt"
 fi
 echo ""

@@ -615,6 +615,42 @@ export function useAgentChat(options = {}) {
   }
 
   function formatApprovalDescription(message = {}) {
+    if (message.tool === 'generate_report') {
+      const args = message.args || {};
+      const dataSourceNames = {
+        activity_query: '活动查询结果',
+        analysis_queue: '分析队列',
+        uploaded: '上传的活动数据文件'
+      };
+      const perspectiveNames = {
+        outbound_call_analysis: '外呼',
+        sms_analysis: '短信',
+        comprehensive_operations: '综合运营'
+      };
+      const parts = [];
+      if (dataSourceNames[args.data_source]) {
+        parts.push(`数据来源：${dataSourceNames[args.data_source]}`);
+      }
+      if (args.perspective && perspectiveNames[args.perspective]) {
+        parts.push(`分析视角：${perspectiveNames[args.perspective]}`);
+      }
+      if (Array.isArray(args.metrics) && args.metrics.length) {
+        parts.push(`分析指标：${args.metrics.join('、')}`);
+      }
+      if (Array.isArray(args.dimensions) && args.dimensions.length) {
+        parts.push(`分析维度：${args.dimensions.join('、')}`);
+      }
+      if (args.chart_style) {
+        parts.push(`图表偏好：${args.chart_style}`);
+      }
+      if (args.report_theme) {
+        parts.push(`报告主题：${args.report_theme}`);
+      }
+      if (args.analysis_focus) {
+        parts.push(`分析要求：${args.analysis_focus}`);
+      }
+      return parts.length ? parts.join('\n') : '按默认配置生成';
+    }
     if (message.tool === 'modify_report') {
       const args = message.args || {};
       const parts = [];
