@@ -57,7 +57,7 @@ const doneIconUrl = `${getAppBaseUrl()}analysis-complete-icon.png`;
   width: 28px;
   height: 28px;
   overflow: visible;
-  color: #165dff;
+  color: var(--color-primary);
   stroke: currentColor;
   stroke-width: 2.8;
   stroke-linecap: round;
@@ -76,7 +76,7 @@ const doneIconUrl = `${getAppBaseUrl()}analysis-complete-icon.png`;
 }
 
 .thinking-status-icon__track {
-  stroke: #dbe7ff;
+  stroke: var(--color-primary-border);
   stroke-width: 2.4;
 }
 
@@ -95,7 +95,7 @@ const doneIconUrl = `${getAppBaseUrl()}analysis-complete-icon.png`;
   stroke: none;
 }
 
-.thinking-status-icon__progress-dot { fill: #6f56ff; }
+.thinking-status-icon__progress-dot { fill: var(--color-violet); }
 .thinking-status-icon__center-spark { fill: currentColor; }
 .thinking-status-icon__spark { fill: currentColor; }
 
@@ -108,7 +108,7 @@ const doneIconUrl = `${getAppBaseUrl()}analysis-complete-icon.png`;
 }
 
 .thinking-status-icon.is-paused {
-  color: #86909c;
+  color: var(--text-3);
 }
 
 @keyframes thinking-orbit {

@@ -12,6 +12,18 @@ logger = logging.getLogger("mock.waihu")
 _EXCEL_PATH: Path = Path(__file__).parent / "外呼活动 mock 数据.xlsx"
 _data_cache: list[dict[str, Any]] | None = None
 
+_DEMO_NAME_PREFIX = "DEMO-"
+
+
+def _apply_demo_name_prefix(record: dict[str, Any]) -> None:
+    """为活动基本信息中的活动名称添加 DEMO- 前缀（幂等）."""
+    basic = record.get("basic_info")
+    if not isinstance(basic, dict):
+        return
+    act_name = basic.get("act_name")
+    if isinstance(act_name, str) and act_name and not act_name.startswith(_DEMO_NAME_PREFIX):
+        basic["act_name"] = _DEMO_NAME_PREFIX + act_name
+
 # Excel 列头与响应字段的映射
 _COLUMN_MAP: list[tuple[str, str]] = [
     ("act_no", "act_no"),
@@ -130,6 +142,7 @@ def load_data() -> list[dict[str, Any]]:
             else:
                 record[field_name] = _parse_kv_block(cell_value)
 
+        _apply_demo_name_prefix(record)
         rows.append(record)
 
     _data_cache = rows

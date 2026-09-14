@@ -214,8 +214,8 @@ onMounted(loadPrompts);
 }
 .quick-prompt-error {
   margin: 10px 16px 0;
-  border-color: #ffd0d0;
-  background: #fff5f5;
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-weak);
   color: var(--danger);
 }
 .quick-prompt-list {
@@ -234,7 +234,7 @@ onMounted(loadPrompts);
   padding: 10px 12px;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .quick-prompt-row.dragging {
@@ -242,11 +242,11 @@ onMounted(loadPrompts);
 }
 .quick-prompt-row.drop-target {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.08);
+  box-shadow: var(--shadow-focus);
 }
 .quick-prompt-row.has-error {
   border-color: var(--danger);
-  background: #fff5f5;
+  background: var(--color-danger-weak);
 }
 .quick-prompt-drag-handle {
   font-size: 18px;
@@ -261,7 +261,7 @@ onMounted(loadPrompts);
   flex: 1;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 7px 10px;
   font-size: 13px;
   color: var(--t1);
@@ -270,7 +270,7 @@ onMounted(loadPrompts);
 }
 .quick-prompt-input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.08);
+  box-shadow: var(--shadow-focus);
 }
 .quick-prompt-row.has-error .quick-prompt-input {
   border-color: var(--danger);
@@ -291,8 +291,8 @@ onMounted(loadPrompts);
 .toggle-track {
   width: 36px;
   height: 20px;
-  background: #d9d9d9;
-  border-radius: 999px;
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
   position: relative;
   transition: background 0.2s;
 }
@@ -308,7 +308,7 @@ onMounted(loadPrompts);
   background: #fff;
   border-radius: 50%;
   transition: transform 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xs);
 }
 .quick-prompt-toggle input:checked + .toggle-track .toggle-thumb {
   transform: translateX(16px);
@@ -325,14 +325,14 @@ onMounted(loadPrompts);
   width: 28px;
   height: 28px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--t3);
   cursor: pointer;
   flex-shrink: 0;
 }
 .quick-prompt-delete:hover {
-  background: #fff5f5;
+  background: var(--color-danger-weak);
   color: var(--danger);
 }
 .quick-prompt-footer {

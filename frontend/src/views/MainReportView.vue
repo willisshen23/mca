@@ -495,23 +495,23 @@ function retryBoot() {
 .report-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--t3); }
 /* 聊天组件（ChatMessageList/ChatComposer）的设计变量定义在 UiChatView 的 .ui-chat-page 上，
    这里按同值补齐，否则 var(--BD)/var(--P) 等未定义会导致气泡边框、背景整条失效 */
-.report-chat { --P: #165DFF; --PL: #E8F0FF; --PH: #0E47CC; --BD: #E5E6EB; --BG: #F7F8FA; --T1: #1D2129; --T2: #4E5969; --T3: #86909C; --RAI: 16px 16px 4px 16px; --RUSER: 16px 4px 16px 16px; }
+.report-chat { --P: var(--color-primary); --PL: var(--color-primary-weak); --PH: var(--color-primary-hover); --BD: var(--border-base); --BG: var(--bg-subtle); --T1: var(--text-1); --T2: var(--text-2); --T3: var(--text-3); --RAI: 16px 16px 4px 16px; --RUSER: 16px 4px 16px 16px; }
 /* 消息区用浅灰底（同 /chat-ui 页面底色），白色气泡与 slim 报告卡片才有可见边界；
    消息纵向间距同 /chat-ui 的 .chat-body（flex + gap 18px），否则各条输出会挤在一起 */
-.report-chat-body { max-height: 420px; overflow-y: auto; padding: 12px; background: var(--BG); border-radius: 8px; display: flex; flex-direction: column; gap: 18px; }
+.report-chat-body { max-height: 420px; overflow-y: auto; padding: 12px; background: var(--BG); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 18px; }
 .report-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 0; color: var(--t3); font-size: 13px; }
 /* 版本切换：报告区标题行右侧的下拉选择 */
 .report-version-picker { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t3); }
-.report-version-picker select { height: 28px; padding: 0 8px; border: .5px solid var(--border); border-radius: 8px; background: #fff; color: var(--t1); font-size: 12px; cursor: pointer; outline: none; }
+.report-version-picker select { height: 28px; padding: 0 8px; border: .5px solid var(--border); border-radius: var(--radius-md); background: #fff; color: var(--t1); font-size: 12px; cursor: pointer; outline: none; }
 .report-version-picker select:focus { border-color: var(--primary); }
 .report-version-picker select:disabled { cursor: wait; opacity: .6; }
-.report-version-error { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 12px; border: .5px solid #fecdd3; border-radius: 8px; background: #fff1f2; color: #b42318; font-size: 12px; }
-.report-version-error button { border: .5px solid #fecdd3; border-radius: 6px; background: #fff; color: #b42318; font-size: 12px; padding: 2px 10px; cursor: pointer; }
+.report-version-error { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 12px; border: .5px solid var(--color-danger-border); border-radius: var(--radius-md); background: var(--color-danger-weak); color: var(--color-danger); font-size: 12px; }
+.report-version-error button { border: .5px solid var(--color-danger-border); border-radius: var(--radius-sm); background: #fff; color: var(--color-danger); font-size: 12px; padding: 2px 10px; cursor: pointer; }
 .spinning { animation: report-spin 1s linear infinite; }
 @keyframes report-spin { to { transform: rotate(360deg); } }
 /* 导出遮罩（UiChatView 中为组件 scoped 样式，这里按报告页变量补齐） */
 .report-export-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, .34); backdrop-filter: blur(2px); }
-.report-export-loading { min-width: 240px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 28px; border: .5px solid rgba(255, 255, 255, .7); border-radius: 14px; background: rgba(255, 255, 255, .96); color: var(--t1); font-size: 14px; font-weight: 700; box-shadow: 0 18px 48px rgba(15, 23, 42, .2); }
+.report-export-loading { min-width: 240px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 28px; border: .5px solid rgba(255, 255, 255, .7); border-radius: var(--radius-lg); background: rgba(255, 255, 255, .96); color: var(--t1); font-size: 14px; font-weight: 700; box-shadow: var(--shadow-lg); }
 .report-export-loading small { color: var(--t3); font-size: 11px; font-weight: 400; }
 .report-export-spinner { color: var(--primary); font-size: 34px; animation: report-spin .9s linear infinite; }
 </style>

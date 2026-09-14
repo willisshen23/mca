@@ -183,7 +183,7 @@ onMounted(loadLogs);
                 <th>用户提问</th>
                 <th>回复摘要</th>
                 <th>状态</th>
-                <th>耗时</th>
+                <th class="num">耗时</th>
                 <th>查看</th>
               </tr>
             </thead>
@@ -209,7 +209,7 @@ onMounted(loadLogs);
                 <td>
                   <span class="tag" :class="statusClass(row.status)">{{ statusText(row.status) }}</span>
                 </td>
-                <td>{{ formatDuration(row.duration_ms) }}</td>
+                <td class="num">{{ formatDuration(row.duration_ms) }}</td>
                 <td>
                   <button class="btn sm" type="button" @click="openDetail(row)">查看</button>
                 </td>
@@ -280,16 +280,16 @@ onMounted(loadLogs);
 .logs-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .filter-input { width: min(260px, 100%); flex: 0 1 260px; }
 .status-select { width: 130px; }
-.logs-error { border-color: #ffd0d0; background: #fff5f5; color: var(--danger); }
+.logs-error { border-color: var(--color-danger-border); background: var(--color-danger-weak); color: var(--danger); }
 .logs-table th, .logs-table td { white-space: nowrap; }
 .logs-time { color: var(--t2); }
 .thread-id { display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .principal { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .question, .answer { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; }
 .logs-empty { text-align: center; color: var(--t3); padding: 28px 12px !important; }
-.tdanger { background: #FFF0F0; color: var(--danger); }
+.tdanger { background: var(--color-danger-weak); color: var(--danger); }
 .logs-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 12px; color: var(--t2); font-size: 12px; flex-wrap: wrap; }
-.page-size { height: 28px; border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--t1); padding: 0 8px; outline: none; }
+.page-size { height: 28px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: #fff; color: var(--t1); padding: 0 8px; outline: none; }
 .page-current { min-width: 52px; text-align: center; color: var(--t2); }
 .pgb:disabled { cursor: not-allowed; opacity: .45; pointer-events: none; }
 .detail-loading { min-height: 200px; display: flex; align-items: center; justify-content: center; color: var(--t3); }
@@ -297,9 +297,9 @@ onMounted(loadLogs);
 .turn { display: flex; flex-direction: column; gap: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 14px; }
 .turn:last-child { border-bottom: 0; }
 .turn-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--t3); }
-.bubble { border-radius: 8px; padding: 10px 12px; }
-.bubble.user { background: #EEF3FF; }
-.bubble.ai { background: #F7F8FA; }
+.bubble { border-radius: var(--radius-md); padding: 10px 12px; }
+.bubble.user { background: var(--color-primary-weak); }
+.bubble.ai { background: var(--bg-subtle); }
 .bubble-role { font-size: 12px; color: var(--t2); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .bubble-text { font-size: 13px; line-height: 1.7; color: var(--t1); white-space: pre-wrap; word-break: break-word; }
 :deep(.modal.lg) { width: min(960px, 96vw); }

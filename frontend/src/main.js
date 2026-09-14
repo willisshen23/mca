@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 import './assets/styles.css';
+import './assets/fab-theme.css'; // FAB 统一风格覆盖层，须在 styles.css 之后
 
 // Hash 路由兼容入口：旧 history 模式链接（如 /main/analysis/report?srcSysNo=x）
 // 重写到 /?srcSysNo=x#/main/analysis/report，search 前置保留供页面挂参读取，

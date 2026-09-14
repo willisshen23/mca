@@ -343,6 +343,17 @@ def _serialize_value(value: Any, field_name: str = "") -> Any:
     return value
 
 
+_DEMO_NAME_PREFIX = "DEMO-"
+
+
+def _apply_demo_name_prefix(rows: list[dict[str, Any]]) -> None:
+    """为所有活动名称统一添加 DEMO- 前缀（幂等）."""
+    for record in rows:
+        name = record.get("活动名称")
+        if isinstance(name, str) and name and not name.startswith(_DEMO_NAME_PREFIX):
+            record["活动名称"] = _DEMO_NAME_PREFIX + name
+
+
 def _fill_derived_fields(rows: list[dict[str, Any]]) -> None:
     """Fill missing derived fields (上月末AUM, 上个月理财余额) by computation.
 
@@ -402,6 +413,7 @@ def load_data() -> list[dict[str, Any]]:
         rows = list(_FALLBACK_CAMPAIGNS)
 
     _fill_derived_fields(rows)
+    _apply_demo_name_prefix(rows)
 
     _data_cache = rows
     logger.info(

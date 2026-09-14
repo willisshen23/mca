@@ -89,7 +89,7 @@ async function handleFileChange(event) {
     <button class="uz" :class="{ ok: store.state.offlineFile }" type="button" :disabled="uploading" @click="triggerSelect">
       <i :class="store.state.offlineFile ? 'ti ti-circle-check' : (uploading ? 'ti ti-loader-2' : 'ti ti-cloud-upload')"></i>
       <p>{{ uploadText }}</p>
-      <small :style="uploadError ? 'color: var(--danger, #F53F3F)' : ''">{{ uploadSub }}</small>
+      <small :style="uploadError ? 'color: var(--danger, var(--color-danger))' : ''">{{ uploadSub }}</small>
     </button>
   </section>
 </template>

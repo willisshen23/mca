@@ -71,7 +71,7 @@ function readSkillFromDrop(event) {
         <i class="ti ti-grip-vertical dh"></i>
         <div class="ci">
           <div class="cn">{{ skill.name }}</div>
-          <div class="cc2"><span class="tag tb" style="font-size: 10px">{{ skill.cat }}</span></div>
+          <div class="cc2"><span class="tag tb" style="font-size: 11px">{{ skill.cat }}</span></div>
         </div>
         <div class="ca">
           <button class="cbtn" type="button" title="上移" @click.stop="store.moveCanvasSkill(index, -1)">

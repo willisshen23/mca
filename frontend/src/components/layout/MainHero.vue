@@ -4,11 +4,11 @@
 defineProps({
   title: {
     type: String,
-    default: '基于 Jiuwen-Core 全栈自研框架打造的智能 Agent'
+    default: '营销活动智能分析助手'
   },
   subtitle: {
     type: String,
-    default: '营销活动智能分析助手'
+    default: ''
   }
 });
 </script>
@@ -33,10 +33,10 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 24px;
+  padding: 14px 24px;
   overflow: hidden;
   color: #fff;
-  background: linear-gradient(120deg, #0E47CC 0%, #165DFF 55%, #4096FF 100%);
+  background: var(--gradient-brand);
 }
 
 /* 装饰性光斑 + 网格纹理，增强科技感 */
@@ -79,7 +79,7 @@ defineProps({
   font-weight: 600;
   letter-spacing: 0.5px;
   line-height: 1.3;
-  text-shadow: 0 1px 4px rgba(14, 71, 204, 0.35);
+  text-shadow: 0 1px 4px rgba(31, 91, 196, 0.35);
 }
 
 .main-hero-title i {

@@ -225,7 +225,7 @@ function statusClass(status) {
 .page-size {
   height: 28px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: #fff;
   color: var(--t1);
   padding: 0 8px;

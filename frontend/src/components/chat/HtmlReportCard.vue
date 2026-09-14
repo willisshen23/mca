@@ -140,33 +140,33 @@ function onDownloadPng() {
 
 <style scoped>
 /* 组件自带主题变量兜底（在 UiChatView 内会被同名变量覆盖为相同值，保证脱离聊天页也可渲染） */
-.html-report-card { --P: #165DFF; --PL: #E8F0FF; --PH: #0E47CC; --BD: #E5E6EB; --BG: #F7F8FA; --T1: #1D2129; --T2: #4E5969; --T3: #86909C; width: min(860px, calc(100% - 46px)); border: .5px solid var(--BD); border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
+.html-report-card { --P: var(--color-primary); --PL: var(--color-primary-weak); --PH: var(--color-primary-hover); --BD: var(--border-base); --BG: var(--bg-subtle); --T1: var(--text-1); --T2: var(--text-2); --T3: var(--text-3); width: min(860px, calc(100% - 46px)); border: .5px solid var(--BD); border-radius: var(--radius-lg); background: #fff; overflow: hidden; box-shadow: var(--shadow-xs); }
 .html-report-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: .5px solid var(--BD); background: var(--BG); }
 .html-report-head > div:first-child { min-width: 0; }
 .html-report-title { font-size: 14px; font-weight: 700; color: var(--T1); }
 .html-report-sub { margin-top: 2px; font-size: 11px; color: var(--T3); }
 .html-report-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 0 auto; flex-wrap: nowrap; }
 .report-feedback-actions { display: inline-flex; align-items: center; gap: 6px; }
-.report-feedback-btn { width: 38px; height: 38px; border: .5px solid var(--BD); border-radius: 10px; background: #fff; color: var(--T3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s, color .15s; }
+.report-feedback-btn { width: 38px; height: 38px; border: .5px solid var(--BD); border-radius: var(--radius-md); background: #fff; color: var(--T3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s, color .15s; }
 .report-feedback-btn i { font-size: 21px; }
-.report-feedback-btn:hover:not(:disabled) { border-color: #bcd0ff; color: var(--P); background: #f5f8ff; }
-.report-feedback-btn.active { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
-.report-feedback-btn.negative.active { color: #b42318; background: #fff1f2; border-color: #fecdd3; }
+.report-feedback-btn:hover:not(:disabled) { border-color: var(--color-primary-border); color: var(--P); background: var(--color-primary-weaker); }
+.report-feedback-btn.active { color: var(--color-success); background: var(--color-success-weak); border-color: var(--color-success-border); }
+.report-feedback-btn.negative.active { color: var(--color-danger); background: var(--color-danger-weak); border-color: var(--color-danger-border); }
 .report-feedback-btn:disabled { cursor: not-allowed; opacity: .48; }
-.html-report-feedback-error { padding: 7px 14px; border-bottom: .5px solid #fecdd3; background: #fff1f2; color: #b42318; font-size: 11px; }
-.report-feedback-comment { padding: 10px 14px; border-bottom: .5px solid var(--BD); background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
-.report-feedback-comment-input { width: 100%; resize: vertical; min-height: 56px; border: .5px solid var(--BD); border-radius: 8px; padding: 8px 10px; outline: none; background: #fff; color: var(--T1); font-size: 12px; line-height: 1.6; font-family: inherit; }
-.report-feedback-comment-input:focus { border-color: var(--P); box-shadow: 0 0 0 2px rgba(22, 93, 255, .08); }
+.html-report-feedback-error { padding: 7px 14px; border-bottom: .5px solid var(--color-danger-border); background: var(--color-danger-weak); color: var(--color-danger); font-size: 11px; }
+.report-feedback-comment { padding: 10px 14px; border-bottom: .5px solid var(--BD); background: var(--bg-subtle); display: flex; flex-direction: column; gap: 8px; }
+.report-feedback-comment-input { width: 100%; resize: vertical; min-height: 56px; border: .5px solid var(--BD); border-radius: var(--radius-md); padding: 8px 10px; outline: none; background: #fff; color: var(--T1); font-size: 12px; line-height: 1.6; font-family: inherit; }
+.report-feedback-comment-input:focus { border-color: var(--P); box-shadow: var(--shadow-focus); }
 .report-feedback-comment-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.report-feedback-comment-btn { height: 28px; padding: 0 12px; border: .5px solid var(--BD); border-radius: 8px; background: #fff; color: var(--T2); font-size: 12px; font-weight: 600; cursor: pointer; }
+.report-feedback-comment-btn { height: 28px; padding: 0 12px; border: .5px solid var(--BD); border-radius: var(--radius-md); background: #fff; color: var(--T2); font-size: 12px; font-weight: 600; cursor: pointer; }
 .report-feedback-comment-btn:hover:not(:disabled) { border-color: var(--P); color: var(--P); }
 .report-feedback-comment-btn.primary { background: var(--P); border-color: var(--P); color: #fff; }
 .report-feedback-comment-btn.primary:hover:not(:disabled) { color: #fff; filter: brightness(1.05); }
 .report-feedback-comment-btn:disabled { opacity: .48; cursor: not-allowed; }
-.html-download-btn { height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: var(--P); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; }
+.html-download-btn { height: 32px; padding: 0 12px; border: none; border-radius: var(--radius-md); background: var(--P); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; }
 .html-download-btn:hover { background: var(--PH); }
 .html-download-btn.secondary { border: .5px solid var(--BD); background: #fff; color: var(--T2); }
-.html-download-btn.secondary:hover { border-color: var(--P); background: #eff6ff; color: var(--P); }
+.html-download-btn.secondary:hover { border-color: var(--P); background: var(--color-primary-weak); color: var(--P); }
 .html-download-btn:disabled { cursor: wait; opacity: .58; }
 .html-report-preview { display: block; width: 100%; min-height: 360px; max-height: 1400px; border: 0; background: #fff; }
 
@@ -185,33 +185,33 @@ function onDownloadPng() {
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-strong);
 }
 .version-badge {
-  background: #0f172a;
+  background: var(--text-1);
   color: #fff;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
 }
 .version-history-toggle {
-  color: #2563eb;
+  color: var(--color-primary);
   cursor: pointer;
   font-size: 13px;
 }
 .html-report-history {
   padding: 8px 16px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-strong);
 }
 .history-item {
   display: flex;
   gap: 12px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-2);
 }
 .history-action {
-  color: #0f172a;
+  color: var(--text-1);
   font-weight: 500;
 }
 .history-summary {

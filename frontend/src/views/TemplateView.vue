@@ -221,7 +221,7 @@ onMounted(loadData);
       <button class="btn"><i class="ti ti-search"></i></button>
       <span style="margin-left: auto; font-size: 12px; color: var(--t3)">共 {{ templateCount }} 个模板</span>
     </div>
-    <div v-if="error" class="itip" style="margin: 10px 20px 0; border-color: #ffd0d0; background: #fff5f5; color: var(--danger)">
+    <div v-if="error" class="itip" style="margin: 10px 20px 0; border-color: var(--color-danger-border); background: var(--color-danger-weak); color: var(--danger)">
       <i class="ti ti-alert-circle"></i>{{ error }}
     </div>
     <div style="flex: 1; overflow-y: auto">
@@ -243,7 +243,7 @@ onMounted(loadData);
               <div style="flex: 1; min-width: 0">
                 <div class="tpl-name">{{ tpl.name }}</div>
                 <div class="tpl-acts">
-                  <span class="tag" :class="getTypeBadgeClass(tpl.type)" style="font-size: 10px">{{ tpl.type }}</span>
+                  <span class="tag" :class="getTypeBadgeClass(tpl.type)" style="font-size: 11px">{{ tpl.type }}</span>
                 </div>
               </div>
             </div>
@@ -326,7 +326,7 @@ onMounted(loadData);
                 <div style="flex: 1">
                   <div class="spi-name">{{ skill.name }}</div>
                   <div style="display: flex; gap: 4px; margin-top: 2px">
-                    <span class="tag tgr" style="font-size: 10px">{{ skill.cat }}</span>
+                    <span class="tag tgr" style="font-size: 11px">{{ skill.cat }}</span>
                   </div>
                 </div>
                 <i v-if="newTemplate.selectedSkills.includes(skill.name)" class="ti ti-check" style="color: var(--primary); font-size: 14px"></i>
@@ -343,7 +343,7 @@ onMounted(loadData);
                 class="ss-chip"
                 @click="toggleSkillSelection(skill)"
               >
-                <div class="order-num" style="width: 16px; height: 16px; font-size: 9px">{{ index + 1 }}</div>
+                <div class="order-num" style="width: 16px; height: 16px; font-size: 11px">{{ index + 1 }}</div>
                 {{ skill }}
                 <i class="ti ti-x" style="font-size: 10px"></i>
               </div>
@@ -372,7 +372,7 @@ onMounted(loadData);
             </div>
           </div>
         </div>
-        <div style="font-size: 12px; color: var(--t2); background: #F7F8FA; padding: 10px 12px; border-radius: 4px; line-height: 1.6">{{ viewingTemplate.desc }}</div>
+        <div style="font-size: 12px; color: var(--t2); background: var(--bg-subtle); padding: 10px 12px; border-radius: var(--radius-xs); line-height: 1.6">{{ viewingTemplate.desc }}</div>
       </div>
       <div style="font-size: 12px; font-weight: 600; color: var(--t1); margin-bottom: 8px">SKILL 组件执行顺序</div>
       <div class="tpl-detail-skills">
@@ -385,7 +385,7 @@ onMounted(loadData);
           <div class="tpl-ds-info">
             <div class="tpl-ds-name">{{ skill }}</div>
             <div class="tpl-ds-cat">
-              <span class="tag tb2" style="font-size: 10px">{{ getSkillInfo(skill).cat }}</span>
+              <span class="tag tb2" style="font-size: 11px">{{ getSkillInfo(skill).cat }}</span>
               <span style="color: var(--t3); margin-left: 4px">{{ getSkillInfo(skill).desc }}</span>
             </div>
           </div>
@@ -406,7 +406,7 @@ onMounted(loadData);
     <ModalDialog :open="activeModal === 'delete'" title="确认删除" @close="activeModal = ''" :danger="true">
       <div style="padding: 8px 0;">
         <p style="font-size: 13px; color: var(--t1); line-height: 1.7">确定要删除该模板吗？</p>
-        <p style="font-size: 12px; margin-top: 8px; background: #FFF3F3; border-radius: 4px; padding: 8px 10px; border-left: 3px solid var(--d); color: var(--t2)">删除后该模板无法恢复，请谨慎操作。</p>
+        <p style="font-size: 12px; margin-top: 8px; background: var(--color-danger-weak); border-radius: var(--radius-xs); padding: 8px 10px; border-left: 3px solid var(--d); color: var(--t2)">删除后该模板无法恢复，请谨慎操作。</p>
       </div>
       <template #footer>
         <button class="btn" @click="activeModal = ''">取消</button>
@@ -426,7 +426,7 @@ onMounted(loadData);
 .tpl-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 16px;
   cursor: pointer;
   transition: .15s;
@@ -434,7 +434,7 @@ onMounted(loadData);
 }
 .tpl-card:hover {
   border-color: var(--primary);
-  box-shadow: 0 2px 10px rgba(22, 93, 255, .08);
+  box-shadow: var(--shadow-md);
 }
 .tpl-card-header {
   display: flex;
@@ -445,7 +445,7 @@ onMounted(loadData);
 .tpl-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -476,9 +476,9 @@ onMounted(loadData);
   margin-bottom: 10px;
 }
 .tpl-skill-chip {
-  background: #F7F8FA;
+  background: var(--bg-subtle);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   padding: 2px 7px;
   font-size: 11px;
   color: var(--t2);
@@ -509,7 +509,7 @@ onMounted(loadData);
 .aicon {
   width: 26px;
   height: 26px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -526,13 +526,13 @@ onMounted(loadData);
 .aicon.dl:hover {
   border-color: var(--danger);
   color: var(--danger);
-  background: #FFF0F0;
+  background: var(--color-danger-weak);
 }
 .skill-picker {
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 10px;
-  background: #F7F8FA;
+  background: var(--bg-subtle);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -541,7 +541,7 @@ onMounted(loadData);
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   transition: .15s;
 }
@@ -549,7 +549,7 @@ onMounted(loadData);
   background: #fff;
 }
 .skill-pick-item.chosen {
-  background: #E8F0FF;
+  background: var(--color-primary-weak);
 }
 .skill-pick-item.chosen .spi-name {
   color: var(--primary);
@@ -566,14 +566,14 @@ onMounted(loadData);
   min-height: 32px;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: #fff;
 }
 .ss-chip {
   background: var(--pl);
   color: var(--primary);
   padding: 3px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: 11px;
   display: flex;
   align-items: center;
@@ -594,7 +594,7 @@ onMounted(loadData);
   border-radius: 50%;
   background: var(--primary);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -611,8 +611,8 @@ onMounted(loadData);
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background: #F7F8FA;
-  border-radius: 4px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-xs);
   border: 1px solid var(--border);
 }
 .tpl-ds-num {
@@ -621,7 +621,7 @@ onMounted(loadData);
   border-radius: 50%;
   background: var(--primary);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -642,10 +642,10 @@ onMounted(loadData);
   margin-top: 2px;
 }
 
-.tb2 { background: #E8F0FF; color: #165DFF; }
-.to { background: #FFF3E0; color: #FF7D00; }
-.tpur { background: #EDE9FE; color: #5B21AB; }
-.tgr { background: #F2F3F5; color: var(--t2); }
+.tb2 { background: var(--color-primary-weak); color: var(--color-primary); }
+.to { background: var(--color-warning-weak); color: var(--color-warning); }
+.tpur { background: var(--color-violet-weak); color: var(--color-violet-text); }
+.tgr { background: var(--bg-sunken); color: var(--t2); }
 
 @media (max-width: 960px) {
   .tpl-grid {

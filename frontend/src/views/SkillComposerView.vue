@@ -191,28 +191,28 @@ onMounted(loadTemplates);
   gap: 8px;
   padding: 7px 12px 7px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fbfcfe;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
   cursor: pointer;
   text-align: left;
   transition: border-color .15s, background .15s, box-shadow .15s;
 }
 
 .tpl-chip:hover {
-  border-color: #a9c4ff;
+  border-color: var(--color-primary-border);
   background: #fff;
 }
 
 .tpl-chip.active {
   border-color: var(--primary);
   background: var(--pl);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, .1);
+  box-shadow: var(--shadow-md);
 }
 
 .tpl-chip-icon {
   width: 30px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +221,7 @@ onMounted(loadTemplates);
 }
 
 .tpl-chip-icon.default {
-  background: #edf3ff;
+  background: var(--color-primary-weak);
   color: var(--primary);
 }
 
@@ -244,7 +244,7 @@ onMounted(loadTemplates);
 }
 
 .tpl-chip-cnt {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--t3);
   white-space: nowrap;
 }

@@ -239,7 +239,7 @@ onMounted(loadData);
       <input v-model="keyword" class="fi" placeholder="搜索技能名称" />
       <button class="btn" type="button"><i class="ti ti-search"></i></button>
     </div>
-    <div v-if="error" class="itip" style="margin: 10px 20px 0; border-color: #ffd0d0; background: #fff5f5; color: var(--danger)">
+    <div v-if="error" class="itip" style="margin: 10px 20px 0; border-color: var(--color-danger-border); background: var(--color-danger-weak); color: var(--danger)">
       <i class="ti ti-alert-circle"></i>{{ error }}
     </div>
     <div class="sktw">
@@ -315,7 +315,7 @@ onMounted(loadData);
             <tr>
               <th>分类名称</th>
               <th>分类说明</th>
-              <th>技能数量</th>
+              <th class="num">技能数量</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -326,7 +326,7 @@ onMounted(loadData);
                 <span v-if="index === 0" style="margin-left: 6px; font-size: 12px; color: var(--t3)">(默认)</span>
               </td>
               <td>{{ item.description || '-' }}</td>
-              <td>{{ item.skillCount }}</td>
+              <td class="num">{{ item.skillCount }}</td>
               <td>
                 <div class="aicons">
                   <button 
@@ -388,7 +388,7 @@ onMounted(loadData);
         <p v-if="deletingSkill" style="font-size: 12px; color: var(--t2); margin-top: 6px">
           SKILL名称：<strong>{{ deletingSkill.name }}</strong>
         </p>
-        <p style="font-size: 12px; margin-top: 8px; background: #FFF3F3; border-radius: 4px; padding: 8px 10px; border-left: 3px solid var(--d); color: var(--t2)">删除后该 SKILL 将不再出现在技能列表和模板组件选择中，请谨慎操作。</p>
+        <p style="font-size: 12px; margin-top: 8px; background: var(--color-danger-weak); border-radius: var(--radius-xs); padding: 8px 10px; border-left: 3px solid var(--d); color: var(--t2)">删除后该 SKILL 将不再出现在技能列表和模板组件选择中，请谨慎操作。</p>
       </div>
       <template #footer>
         <button class="btn" type="button" @click="activeModal = ''">取消</button>

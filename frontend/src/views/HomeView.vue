@@ -162,9 +162,9 @@ const trendBars = computed(() => {
   const height = 180;
   const keys = ['visitors', 'conversations', 'reports'];
   const colors = {
-    visitors: '#165dff',
-    conversations: '#00b578',
-    reports: '#8d5ce6'
+    visitors: '#2B6EDD',
+    conversations: '#12A150',
+    reports: '#8D9DF8'
   };
   const max = trendPoints.value.max || 1;
   const groupWidth = rows.length ? width / rows.length : width;
@@ -603,15 +603,15 @@ onMounted(async () => {
 
 .llm-usage-heading h3 { font-size: 17px; }
 .llm-usage-heading > span { font-size: 12px; }
-.llm-usage-eyebrow { font-size: 10px; }
+.llm-usage-eyebrow { font-size: 11px; }
 .llm-metric-copy span { font-size: 11px; }
 .llm-metric-copy strong { font-size: 20px; }
-.llm-metric-copy small { font-size: 10px; }
+.llm-metric-copy small { font-size: 11px; }
 
 .token-trend-heading h4 { font-size: 14px; }
 .token-trend-heading p { font-size: 11px; }
-.token-gridline span { font-size: 10px; }
-.token-date-label { font-size: 10px; }
+.token-gridline span { font-size: 11px; }
+.token-date-label { font-size: 11px; }
 .token-trend-empty { font-size: 12px; }
 
 .trend-legend { font-size: 11px; }

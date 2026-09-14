@@ -281,10 +281,10 @@ onMounted(loadSessions);
                 <th>最后活跃时间</th>
                 <th>会话标题</th>
                 <th>发起人</th>
-                <th>报告数</th>
-                <th>版本数</th>
-                <th>👍</th>
-                <th>👎</th>
+                <th class="num">报告数</th>
+                <th class="num">版本数</th>
+                <th class="num"><i class="ti ti-thumb-up" aria-hidden="true"></i></th>
+                <th class="num"><i class="ti ti-thumb-down" aria-hidden="true"></i></th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -301,13 +301,13 @@ onMounted(loadSessions);
                   <span class="question" :title="row.title">{{ row.title || '-' }}</span>
                 </td>
                 <td class="principal" :title="principal(row)">{{ principal(row) }}</td>
-                <td>{{ row.report_count ?? 0 }}</td>
-                <td>{{ row.version_count ?? 0 }}</td>
-                <td>
+                <td class="num">{{ row.report_count ?? 0 }}</td>
+                <td class="num">{{ row.version_count ?? 0 }}</td>
+                <td class="num">
                   <span class="count-like" v-if="row.like_count">{{ row.like_count }}</span>
                   <span v-else class="count-empty">0</span>
                 </td>
-                <td>
+                <td class="num">
                   <span class="count-dislike" v-if="row.dislike_count">{{ row.dislike_count }}</span>
                   <span v-else class="count-empty">0</span>
                 </td>
@@ -350,8 +350,8 @@ onMounted(loadSessions);
           <span class="session-meta">发起人：{{ principal(sessionDetail) }}</span>
           <span class="session-meta">报告 {{ sessionDetail.report_count ?? (sessionDetail.reports || []).length }} 份</span>
           <span class="session-meta">版本 {{ sessionDetail.version_count ?? 0 }} 个</span>
-          <span class="session-meta count-like">👍 {{ sessionDetail.like_count ?? 0 }}</span>
-          <span class="session-meta count-dislike">👎 {{ sessionDetail.dislike_count ?? 0 }}</span>
+          <span class="session-meta count-like"><i class="ti ti-thumb-up" aria-hidden="true"></i> {{ sessionDetail.like_count ?? 0 }}</span>
+          <span class="session-meta count-dislike"><i class="ti ti-thumb-down" aria-hidden="true"></i> {{ sessionDetail.dislike_count ?? 0 }}</span>
         </div>
 
         <table class="tbl report-table">
@@ -496,7 +496,7 @@ onMounted(loadSessions);
 .feedback-filter-select { width: 110px; flex: 0 0 auto; }
 .date-filter-input { width: 140px; flex: 0 0 auto; }
 .date-sep { color: var(--t3); font-size: 12px; }
-.history-error { border-color: #ffd0d0; background: #fff5f5; color: var(--danger); }
+.history-error { border-color: var(--color-danger-border); background: var(--color-danger-weak); color: var(--danger); }
 .history-table th, .history-table td { white-space: nowrap; }
 .history-time { color: var(--t2); }
 .request-id { display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -505,41 +505,41 @@ onMounted(loadSessions);
 .question-sm { display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; }
 .template-name { display: inline-block; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; }
 .history-empty { text-align: center; color: var(--t3); padding: 28px 12px !important; }
-.tdanger { background: #FFF0F0; color: var(--danger); }
-.count-like { color: #166534; font-weight: 600; }
-.count-dislike { color: #b42318; font-weight: 600; }
+.tdanger { background: var(--color-danger-weak); color: var(--danger); }
+.count-like { color: var(--color-success); font-weight: 600; }
+.count-dislike { color: var(--color-danger); font-weight: 600; }
 .count-empty { color: var(--t3); }
 .report-actions { display: inline-flex; align-items: center; gap: 8px; }
 .report-link { border: 0; background: transparent; color: var(--primary); cursor: pointer; padding: 0; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .report-link:hover { color: var(--ph); }
-.feedback-tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--t3); font-size: 11px; font-weight: 600; white-space: nowrap; }
-.feedback-like { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
-.feedback-dislike { color: #b42318; background: #fff1f2; border-color: #fecdd3; }
-.feedback-empty { color: var(--t3); background: #f7f8fa; }
+.feedback-tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: #fff; color: var(--t3); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.feedback-like { color: var(--color-success); background: var(--color-success-weak); border-color: var(--color-success-border); }
+.feedback-dislike { color: var(--color-danger); background: var(--color-danger-weak); border-color: var(--color-danger-border); }
+.feedback-empty { color: var(--t3); background: var(--bg-subtle); }
 .prompt-loading { min-height: 260px; display: flex; align-items: center; justify-content: center; color: var(--t3); }
-.prompt-viewer { width: 100%; height: 60vh; min-height: 360px; resize: none; border: 1px solid var(--border); border-radius: 6px; padding: 12px; outline: none; background: #fafbfc; color: var(--t1); font-size: 12px; line-height: 1.7; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
-.prompt-viewer:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(22, 93, 255, .08); }
+.prompt-viewer { width: 100%; height: 60vh; min-height: 360px; resize: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; outline: none; background: var(--bg-subtle); color: var(--t1); font-size: 12px; line-height: 1.7; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
+.prompt-viewer:focus { border-color: var(--primary); box-shadow: var(--shadow-focus); }
 .history-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 12px; color: var(--t2); font-size: 12px; flex-wrap: wrap; }
-.page-size { height: 28px; border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--t1); padding: 0 8px; outline: none; }
+.page-size { height: 28px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: #fff; color: var(--t1); padding: 0 8px; outline: none; }
 .page-current { min-width: 52px; text-align: center; color: var(--t2); }
 .pgb:disabled { cursor: not-allowed; opacity: .45; pointer-events: none; }
 .session-content { display: flex; flex-direction: column; gap: 12px; }
-.session-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fafbfc; }
+.session-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-subtle); }
 .session-meta { font-size: 12px; color: var(--t2); }
 .report-table th, .report-table td { white-space: nowrap; }
-.version-row > td { background: #f8fafc; padding: 10px 14px !important; white-space: normal; }
+.version-row > td { background: var(--bg-subtle); padding: 10px 14px !important; white-space: normal; }
 .version-empty { color: var(--t3); font-size: 12px; }
 .version-item { padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .version-item:last-child { border-bottom: 0; }
 .version-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.version-badge { background: #0f172a; color: #fff; padding: 1px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-.source-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.source-generate { color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; }
-.source-modify { color: #b45309; background: #fffbeb; border: 1px solid #fde68a; }
+.version-badge { background: var(--text-1); color: #fff; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; }
+.source-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; }
+.source-generate { color: var(--color-primary-hover); background: var(--color-primary-weak); border: 1px solid var(--color-primary-border); }
+.source-modify { color: var(--color-warning); background: var(--color-warning-weak); border: 1px solid var(--color-warning-border); }
 .version-note { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--t2); }
 .version-time { font-size: 12px; color: var(--t3); }
 .version-feedback-meta { font-size: 11px; color: var(--t3); }
-.version-comment { margin-top: 4px; padding-left: 46px; font-size: 12px; color: #b42318; word-break: break-word; }
+.version-comment { margin-top: 4px; padding-left: 46px; font-size: 12px; color: var(--color-danger); word-break: break-word; }
 :deep(.modal.lg) { width: min(1080px, 96vw); }
 :deep(.modal.lg .mb) { max-height: 74vh; overflow: auto; }
 @media (max-width: 760px) {

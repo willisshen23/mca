@@ -157,18 +157,18 @@ onMounted(() => {
 .logs-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .logs-count { font-size: 12px; color: var(--t3); }
 .logs-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.logs-select { height: 32px; border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--t1); padding: 0 10px; outline: none; min-width: 200px; }
+.logs-select { height: 32px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: #fff; color: var(--t1); padding: 0 10px; outline: none; min-width: 200px; }
 .logs-checkbox { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); cursor: pointer; }
 .logs-checkbox input { accent-color: var(--primary); }
-.logs-error { border-color: #ffd0d0; background: #fff5f5; color: var(--danger); }
-.logs-content { background: #0d1117; border-radius: 8px; overflow: hidden; }
+.logs-error { border-color: var(--color-danger-border); background: var(--color-danger-weak); color: var(--danger); }
+.logs-content { background: #0d1117; border-radius: var(--radius-md); overflow: hidden; }
 .logs-loading, .logs-empty { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8b949e; gap: 12px; }
 .logs-loading { font-size: 14px; }
 .logs-empty i { font-size: 36px; opacity: 0.5; }
 .logs-empty span { font-size: 13px; }
-.logs-pre { margin: 0; padding: 16px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.6; color: #c9d1d9; white-space: pre-wrap; word-break: break-all; max-height: calc(100vh - 280px); overflow-y: auto; }
+.logs-pre { margin: 0; padding: 16px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.6; color: var(--border-strong); white-space: pre-wrap; word-break: break-all; max-height: calc(100vh - 280px); overflow-y: auto; }
 .logs-pre::-webkit-scrollbar { width: 8px; }
 .logs-pre::-webkit-scrollbar-track { background: #161b22; }
-.logs-pre::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-.logs-pre::-webkit-scrollbar-thumb:hover { background: #484f58; }
+.logs-pre::-webkit-scrollbar-thumb { background: #30363d; border-radius: var(--radius-xs); }
+.logs-pre::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
 </style>
