@@ -130,10 +130,19 @@ async def start_buffered_agent_resume(**kwargs) -> AsyncGenerator[str, None]:
 
 
 def get_buffered_run_status(thread_id: str) -> dict:
+    # pending_approval 是服务端权威的待决审批状态：缓冲过期/进程重启后
+    # 前端 localStorage 里的审批卡片会与服务端失配，前端刷新时凭此字段
+    # 作废本地残留卡片，避免输入框被锁死在“等待审批”。
+    pending_approval = v3_sessions.get_pending_interrupt(thread_id) is not None
     run = _buffered_runs.get(thread_id)
     if run is None:
-        return {"exists": False, "active": False, "last_seq": 0}
-    return {"exists": True, "active": not run.done, "last_seq": len(run.frames)}
+        return {"exists": False, "active": False, "last_seq": 0, "pending_approval": pending_approval}
+    return {
+        "exists": True,
+        "active": not run.done,
+        "last_seq": len(run.frames),
+        "pending_approval": pending_approval,
+    }
 
 
 def attach_buffered_agent_run(thread_id: str, after: int = 0) -> AsyncGenerator[str, None] | None:

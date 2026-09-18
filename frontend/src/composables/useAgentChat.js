@@ -577,6 +577,16 @@ export function useAgentChat(options = {}) {
     if (activity) toggleActivitySelection(message, activity);
   }
 
+  // 移除本地残留的未决审批卡片（服务端已无对应待决审批时调用），返回是否有移除
+  function removeUnresolvedApprovalCards(conversation) {
+    if (!Array.isArray(conversation?.dynamicMessages)) return false;
+    const before = conversation.dynamicMessages.length;
+    conversation.dynamicMessages = conversation.dynamicMessages.filter(
+      (message) => !(message?.role === 'approval_request' && !message.resolved)
+    );
+    return conversation.dynamicMessages.length !== before;
+  }
+
   function addApprovalRequest(payload, conversation = options.getConversation?.()) {
     if (!conversation) return;
     const existing = conversation.dynamicMessages.some(
@@ -770,6 +780,14 @@ export function useAgentChat(options = {}) {
     try {
       const after = getRunSequence(conversation.id);
       const status = await getAgentV2RunStatus(conversation.id);
+      // 与服务端权威审批状态对账：本地恢复出的未决审批卡片若与服务端失配
+      // （刷新打断审批恢复、缓冲过期、进程重启等），输入框会被锁死在
+      // “等待审批”。服务端无待决审批时直接作废本地残留卡片。
+      // 旧版服务端不返回 pending_approval 字段时保持现状，不误删。
+      if (status && status.pending_approval === false
+          && removeUnresolvedApprovalCards(conversation)) {
+        persistConversation(conversation);
+      }
       if (!status?.exists) {
         if (hasRunningThinking(conversation)) {
           finishRunningThinking(conversation, { message: '任务已中断' });

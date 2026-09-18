@@ -80,7 +80,8 @@ async def modify_report(
         return error_content("缺少修改指令")
 
     model = get_model("report_generation")
-    prompt = _build_modify_prompt(html, instruction, report_context)
+    translation = _detect_translation(instruction)
+    prompt = _build_modify_prompt(html, instruction, report_context, translation=translation)
 
     try:
         response = await model.invoke(prompt)
@@ -91,7 +92,7 @@ async def modify_report(
     max_retries = max(0, int(get_settings().report_html_guard_max_retries))
     guard_result = None
     for attempt in range(max_retries + 1):
-        guard_result = validate_report_html(new_html)
+        guard_result = validate_report_html(new_html, any_language_title=translation)
         if guard_result.valid:
             break
         if attempt == max_retries:
@@ -182,9 +183,29 @@ def _build_modification_instruction(
     return "\n".join(parts)
 
 
-def _build_modify_prompt(html: str, instruction: str, report_context: dict) -> str:
+_TRANSLATION_HINT_RE = re.compile(r"翻译|译为|translate|translation", re.IGNORECASE)
+
+
+def _detect_translation(instruction: str) -> bool:
+    """修改指令是否为整篇翻译（不限目标语言）：命中时展示校验放行任意语言标题。"""
+    return bool(_TRANSLATION_HINT_RE.search(instruction or ""))
+
+
+def _build_modify_prompt(
+    html: str,
+    instruction: str,
+    report_context: dict,
+    *,
+    translation: bool = False,
+) -> str:
     perspective = report_context.get("perspective", "")
     perspective_hint = f"\n- 保持分析视角：{perspective}" if perspective else ""
+    lang_hint = (
+        "- 本次为整篇翻译：正文与可见标题均使用用户要求的目标语言，<html lang> 属性同步切换（如 en/ja）；"
+        "仍须输出完整 HTML（含 <!DOCTYPE html>、<head>、<meta charset=\"UTF-8\">、<body>）"
+        if translation
+        else '- 输出完整 HTML（含 <!DOCTYPE html>、<html lang="zh-CN">、<head>、<meta charset="UTF-8">、<body>）'
+    )
     return f"""你是一名银行营销活动报告编辑助手。请根据用户要求修改下面这份 HTML 报告，并输出完整、可直接展示的 HTML 文档。
 
 当前 HTML 报告：
@@ -196,7 +217,7 @@ def _build_modify_prompt(html: str, instruction: str, report_context: dict) -> s
 约束：
 - 保持原有报告结构、数据完整性和 ECharts 图表可用；
 - 仅做要求的修改，不要无理由删减其他内容；
-- 输出完整 HTML（含 <!DOCTYPE html>、<html lang="zh-CN">、<head>、<meta charset="UTF-8">、<body>）；
+{lang_hint}；
 - 页面 body 内必须有可见主标题；
 - ECharts 脚本必须可执行，禁止输出裸对象字面量；
 - 不要输出 Markdown、代码块围栏或解释性前后缀。{perspective_hint}

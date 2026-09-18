@@ -152,6 +152,19 @@ async def test_resume_rejects_bad_decision(fake_deps):
     assert _parse(frames[-1])["type"] == "error"
 
 
+def test_run_status_exposes_pending_approval():
+    """run status 必须暴露服务端权威的待决审批状态：前端刷新后凭此
+    作废本地残留的未决审批卡片（缓冲过期/进程重启后本地状态会失配）。"""
+    assert v3_runtime.get_buffered_run_status("t-none")["pending_approval"] is False
+    v3_sessions.set_pending_interrupt("t1", "int-1")
+    try:
+        status = v3_runtime.get_buffered_run_status("t1")
+        assert status["pending_approval"] is True
+        assert status["exists"] is False
+    finally:
+        v3_sessions.clear_pending_interrupt("t1")
+
+
 async def test_duplicate_run_conflict(fake_deps, monkeypatch):
     async def slow_stream(**kw):
         import asyncio

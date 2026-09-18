@@ -20,8 +20,10 @@ REPORT_HTML_GUARD_FAILURE_MESSAGE = "当前模型访问量较大，请稍后重�
 _GENERATION_STEPS = {"marketing_report_synthesis", "report_generation"}
 _MARKDOWN_HEADING_RE = re.compile(r"(?m)^\s{0,3}#{1,6}\s+\S")
 _MARKDOWN_HR_RE = re.compile(r"(?m)^\s{0,3}([-*_])(?:\s*\1){2,}\s*$")
-_MOJIBAKE_RE = re.compile(r"[锟�]|(?:[æçåéè][\x80-\xbf]?|娲|鍙|鎬|绛|璇|佹|冨|€)")
+_MOJIBAKE_RE = re.compile(r"[锟�]|(?:[æçåéè][\x80-\xbf]|娲|鍙|鎬|绛|璇|佹|冨|€)")
 _REPORT_TITLE_KEYWORDS = ("报告", "分析", "营销", "活动")
+# 翻译场景放行：英文报告的可见主标题关键词（大小写不敏感）
+REPORT_TITLE_KEYWORDS_EN = ("report", "analysis", "marketing", "campaign")
 _NON_MAIN_TITLE_TEXT = {"报告摘要", "摘要", "优化建议", "目录"}
 _FORBIDDEN_TERMS = ("快照",)
 
@@ -127,7 +129,13 @@ def build_report_html_retry_instruction(state: AgentState) -> str:
 """
 
 
-def validate_report_html(html_report: str) -> HtmlGuardResult:
+def validate_report_html(
+    html_report: str,
+    *,
+    title_keywords: tuple[str, ...] | None = None,
+    any_language_title: bool = False,
+) -> HtmlGuardResult:
+    keywords = title_keywords or _REPORT_TITLE_KEYWORDS
     issues: list[HtmlGuardIssue] = []
     html = (html_report or "").strip()
     if not html:
@@ -139,7 +147,7 @@ def validate_report_html(html_report: str) -> HtmlGuardResult:
         return HtmlGuardResult(False, issues)
 
     soup = BeautifulSoup(html, "html.parser")
-    text_without_scripts = _remove_script_and_style_text(html)
+    text_without_scripts = _remove_non_visible_text(html)
 
     if not soup.find("html"):
         issues.append(HtmlGuardIssue("missing_html_tag", "Missing <html> root tag."))
@@ -149,7 +157,7 @@ def validate_report_html(html_report: str) -> HtmlGuardResult:
         issues.append(HtmlGuardIssue("missing_body_tag", "Missing <body> tag."))
     if not _has_utf8_charset(soup):
         issues.append(HtmlGuardIssue("missing_utf8_charset", "Missing UTF-8 charset declaration."))
-    if not _has_visible_report_title(soup):
+    if not _has_visible_report_title(soup, keywords, require_keyword=not any_language_title):
         issues.append(HtmlGuardIssue("missing_visible_report_title", "Missing visible report title in the page body."))
 
     if _MARKDOWN_HEADING_RE.search(text_without_scripts):
@@ -174,8 +182,10 @@ def validate_report_html(html_report: str) -> HtmlGuardResult:
     return HtmlGuardResult(not issues, issues)
 
 
-def _remove_script_and_style_text(html: str) -> str:
-    return re.sub(r"<(script|style)\b[\s\S]*?</\1>", "", html, flags=re.IGNORECASE)
+def _remove_non_visible_text(html: str) -> str:
+    """剔除 script/style 内容与 HTML 注释，只保留用户可见文本用于校验。"""
+    without_scripts = re.sub(r"<(script|style)\b[\s\S]*?</\1>", "", html, flags=re.IGNORECASE)
+    return re.sub(r"<!--[\s\S]*?-->", "", without_scripts)
 
 
 def _has_utf8_charset(soup: BeautifulSoup) -> bool:
@@ -187,7 +197,12 @@ def _has_utf8_charset(soup: BeautifulSoup) -> bool:
     return False
 
 
-def _has_visible_report_title(soup: BeautifulSoup) -> bool:
+def _has_visible_report_title(
+    soup: BeautifulSoup,
+    keywords: tuple[str, ...],
+    *,
+    require_keyword: bool = True,
+) -> bool:
     body = soup.find("body") or soup
     selectors = [
         "h1",
@@ -205,12 +220,19 @@ def _has_visible_report_title(soup: BeautifulSoup) -> bool:
     ]
     for selector in selectors:
         for tag in body.select(selector):
-            if _is_visible_report_title_text(tag.get_text(" ", strip=True)):
+            if _is_visible_report_title_text(
+                tag.get_text(" ", strip=True), keywords, require_keyword=require_keyword
+            ):
                 return True
     return False
 
 
-def _is_visible_report_title_text(text: str) -> bool:
+def _is_visible_report_title_text(
+    text: str,
+    keywords: tuple[str, ...],
+    *,
+    require_keyword: bool = True,
+) -> bool:
     normalized = re.sub(r"\s+", "", text or "")
     if len(normalized) < 6:
         return False
@@ -218,7 +240,11 @@ def _is_visible_report_title_text(text: str) -> bool:
         return False
     if normalized.startswith(("一、", "二、", "三、", "四、", "五、", "1.", "1、")):
         return False
-    return any(keyword in normalized for keyword in _REPORT_TITLE_KEYWORDS)
+    if not require_keyword:
+        # 翻译场景放行：只要求有可见主标题，不限定语言
+        return True
+    lowered = normalized.lower()
+    return any(keyword.lower() in lowered for keyword in keywords)
 
 
 def _validate_chart_scripts(soup: BeautifulSoup) -> list[HtmlGuardIssue]:
