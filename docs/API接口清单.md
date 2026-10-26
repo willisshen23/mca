@@ -3,15 +3,15 @@
 > 统计范围：后端正式接口（`backend/src`），**不含 `mock/` 目录**下的模拟接口。
 > 后端入口：[backend/src/main.py](../backend/src/main.py)，所有业务接口统一挂载在 `/api` 前缀下；路由定义位于 [backend/src/api/routers/](../backend/src/api/routers/)。
 > 分类依据：前端实际调用方 —— `/chat-ui` 独立聊天页（前台） vs 管理后台各页面（`/management`、`/skills`、`/history`、`/conversation-logs`、`/templates`、`/logs`、`/settings`）。
-> 更新日期：2026-08-05
+> 更新日期：2026-10-26（新增 `/api/v2/agent/steer` 插话接口）
 
 ## 接口统计
 
 | 分类 | 数量 |
 |---|---|
-| 前台接口（聊天页 `/chat-ui`） | 17 |
+| 前台接口（聊天页 `/chat-ui`） | 18 |
 | 管理后台接口 | 38 |
-| **合计** | **55** |
+| **合计** | **56** |
 
 
 管理后台 38 个接口分布：用量看板 2、运行历史 6、会话日志 2、技能管理 8、活动模板 5、系统设置 11、日志查看 4。
@@ -23,6 +23,7 @@
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | `/api/v2/agent/run` | 发起 agent 对话（SSE 流式） |
+| POST | `/api/v2/agent/steer` | 任意时刻插话：打断当前 run，以插话为新指令带 checkpoint 续跑（SSE 流式） |
 | POST | `/api/v2/agent/cancel` | 取消运行 |
 | POST | `/api/v2/agent/resume` | 人工确认后恢复运行 |
 | GET | `/api/conversations` | 会话列表 |
@@ -40,7 +41,7 @@
 | GET | `/api/agent-run-history/{history_id}/report` | 报告卡片下载 |
 | POST | `/api/usage-dashboard/events` | 前端埋点事件上报 |
 
-前端调用来源：`frontend/src/api/` 下的 [agentRun.js](../frontend/src/api/agentRun.js)、[conversations.js](../frontend/src/api/conversations.js)、[files.js](../frontend/src/api/files.js)、[agentRunHistory.js](../frontend/src/api/agentRunHistory.js)、[usageDashboard.js](../frontend/src/api/usageDashboard.js)、[quickPrompts.js](../frontend/src/api/quickPrompts.js)。
+前端调用来源：`frontend/src/api/` 下的 [agentRun.js](../frontend/src/api/agentRun.js)（`runAgentV2`/`steerAgentV2` 等）、[conversations.js](../frontend/src/api/conversations.js)、[files.js](../frontend/src/api/files.js)、[agentRunHistory.js](../frontend/src/api/agentRunHistory.js)、[usageDashboard.js](../frontend/src/api/usageDashboard.js)、[quickPrompts.js](../frontend/src/api/quickPrompts.js)。
 
 ## 二、管理后台接口
 

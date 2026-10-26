@@ -274,6 +274,7 @@ TOOL_DISPLAY_NAMES = {
     "modify_report": "修改报告",
     "export_report": "导出报告",
     "get_report_content": "查看当前报告",
+    "read_file": "恢复历史工具结果",
 }
 
 # 写操作工具（接 ApprovalEditRail 人机确认；从 agent_v2/tools/__init__.py 逐字平移）

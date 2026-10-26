@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.report_pipeline.capabilities.utils import raise_if_run_cancelled
 
 import logging
 import time
@@ -24,6 +25,7 @@ logger = logging.getLogger("activity-analysis.agent")
 
 
 async def activity_template_matching_node(state: AgentState) -> dict:
+    raise_if_run_cancelled()  # 插话/停止后旧管线尽快中止，勿再烧 LLM 调用
     activities = state.get("activity_list") or []
     component_values = state.get("component_values") or {}
     uploaded_dataset = state.get("uploaded_activity_dataset") or {}

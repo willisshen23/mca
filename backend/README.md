@@ -267,6 +267,18 @@ bash scripts/server.sh logs -n 200 --no-follow
 - 会话状态已持久化到 `data/v3_checkpoints.db`，重启后可恢复；
 - 修改 `.env` 配置后必须重启才能生效。
 
+### 主对话上下文管理
+
+agent_v3 使用 openJiuwen 原生 ContextEngine，默认按以下顺序处理历史：
+
+1. `MessageOffloader` 将超过阈值的历史大 tool 消息替换为短前缀和 reload marker，原文写入专用 workspace；
+2. `DialogueCompressor` 超阈值时调用主模型，将历史工具型 ReAct 块替换为摘要，保留最近消息和最后一轮；
+3. 发送给模型时只取最近 20 个完整对话轮，checkpoint 不设置消息数硬上限。
+
+reload 默认启用：模型需要原文时，可根据 marker 中的精确 `path` 调用原生 `read_file` 恢复。`AGENT_V3_CONTEXT_WORKSPACE_DIR` 默认为 `data/agent_workspace`，文件工具通过沙箱限制只能读取该目录；`AGENT_V3_CONTEXT_RELOAD_ENABLED=false` 可关闭恢复链路。
+
+通过 `AGENT_V3_CONTEXT_*` 环境变量调整阈值或关闭对应能力，详见 `.env.example`。压缩模型复用主模型配置；压缩调用失败时框架保留原消息并继续执行。
+
 ### 访问服务
 
 - 健康检查: http://localhost:9111/activity/health

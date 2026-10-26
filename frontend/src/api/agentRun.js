@@ -17,7 +17,8 @@ export async function runAgentV2({
   orgNo = '',
   srcSysNo = '',
   channel = '',
-  reportComponents = []
+  reportComponents = [],
+  signal
 }) {
   // 返回原始 response，由调用方按 SSE 流读取。
   return fetch(`${API_BASE}/v2/agent/run`, {
@@ -38,7 +39,41 @@ export async function runAgentV2({
       channel,
       // 报告页组件编排预选的分析组件；/chat-ui 传空数组，后端走原模板匹配流程
       report_components: reportComponents
-    })
+    }),
+    signal
+  });
+}
+
+// 任意时刻插话：打断当前 run，以插话为新指令带 checkpoint 续跑。
+// 仅当会话有活跃任务时可用（无活跃任务后端会报错，前端应直接走 runAgentV2）。
+export async function steerAgentV2({
+  threadId,
+  message,
+  originalUserText = '',
+  userId = '',
+  userName = '',
+  orgNo = '',
+  srcSysNo = '',
+  channel = '',
+  signal
+}) {
+  return fetch(`${API_BASE}/v2/agent/steer`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-Id': getUserId()
+    },
+    body: JSON.stringify({
+      thread_id: threadId,
+      message,
+      original_user_text: originalUserText,
+      user_id: userId || getUserId(),
+      user_name: userName,
+      org_no: orgNo,
+      src_sys_no: srcSysNo || getSrcSysNo(),
+      channel
+    }),
+    signal
   });
 }
 

@@ -58,6 +58,27 @@ async def test_resume_delegates_to_v3(monkeypatch):
     assert calls and calls[0]["thread_id"] == "t1" and calls[0]["decision"] == "approve"
 
 
+async def test_steer_delegates_to_v3(monkeypatch):
+    from src.api.routers import agent_v2 as router_mod
+
+    calls = []
+
+    async def spy(**kwargs):
+        calls.append(kwargs)
+        return _fake_stream(**kwargs)
+
+    monkeypatch.setattr(v3_runtime, "start_buffered_agent_steer", spy)
+    app = _make_app(router_mod)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
+        resp = await client.post(
+            "/v2/agent/steer",
+            json={"thread_id": "t1", "message": "等等，把国庆预热活动并进来"},
+        )
+    assert resp.status_code == 200
+    assert calls and calls[0]["thread_id"] == "t1"
+    assert calls[0]["message"] == "等等，把国庆预热活动并进来"
+
+
 async def test_cancel_delegates_to_v3(monkeypatch):
     from src.api.routers import agent_v2 as router_mod
 

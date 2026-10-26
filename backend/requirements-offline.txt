@@ -8,7 +8,7 @@ python-multipart>=0.0.9
 # agent_v3 (openJiuwen agent-core) — 精确钉版，0.x API 仍在演进
 # cryptography 必须钉 46.0.7：PyPI 50.0.0 无 macOS x86_64 wheel 会触发源码编译（需 Rust）
 cryptography==46.0.7
-openjiuwen==0.1.16.post2
+openjiuwen==0.1.19.post2
 
 openai>=1.60,<3.0
 aiosqlite>=0.22  # 会话 API / v1 checkpoint 清理直接依赖

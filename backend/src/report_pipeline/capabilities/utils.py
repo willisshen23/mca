@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import re
 
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger("activity-analysis.agent")
 
 
 _ECHARTS_LOCAL_SRC = "/lib/echarts.min.js"
@@ -189,3 +192,31 @@ def fix_echarts_scripts(html: str) -> str:
         rewritten = True
 
     return str(soup) if rewritten else html
+
+
+class RunCancelledError(RuntimeError):
+    """本 run 已被用户取消（插话/停止）：报告管线应尽快中止。
+
+    在管线阶段边界抛出，把浪费限定在当前阶段内的那一次 LLM 调用；
+    错误文本明示"已被新指令取消、勿重试"，模型读到后不会再发起生成。
+    """
+
+
+def raise_if_run_cancelled() -> None:
+    """若当前 run 的取消事件已置位则抛 RunCancelledError。
+
+    取消事件经 request_context ContextVar 传递：run 启动时注入，
+    stream_process task 创建时拷贝上下文，因此旧 run 的管线看到的是
+    自己那一届的事件，不受新 run 同名 thread 的影响。
+    """
+    from src.agent_v3.request_context import get_request_context
+
+    cancel_event = get_request_context().get("cancel_event")
+    if cancel_event is not None and cancel_event.is_set():
+        logger.warning(
+            "报告管线阶段中止: run 已被取消（插话/停止），request_id=%s",
+            get_request_context().get("request_id") or "-",
+        )
+        raise RunCancelledError(
+            "REQUEST_CANCELLED：本次报告生成已被用户的新指令取消，请勿重试"
+        )

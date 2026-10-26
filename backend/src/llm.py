@@ -3,13 +3,12 @@
 替代原 config.get_llm（v2 旧框架 ChatOpenAI 栈）。角色配置语义与旧 get_llm 一致：
 settings.{role}_llm_api_key/base_url/model/max_tokens，缺省回退全局 llm_*。
 
-P3 spike（Task 1）实测结论，直接决定本模块两处设计：
+模型客户端设计约束：
 
-1. ``ModelClientConfig.timeout`` 只在共享 HTTP 客户端首次建连时生效（缓存键
-   ``(api_key, api_base, verify_ssl, ssl_cert)`` 不含 timeout）。因此逐请求超时
-   必须经 ``Model.invoke(..., timeout=秒)`` 透传——``GuardedModel.invoke`` 接受
-   可选 ``timeout`` kwarg 并原样转发；client config 里的 timeout 仅作首次建连
-   默认值。
+1. 报告管线在独立线程的 ``asyncio.run`` 中执行并关闭事件循环，进程级共享
+   HTTP 客户端会因此把失效连接带回主对话。所有模型配置统一设置
+   ``use_shared_llm_http_client=False``，每次请求使用并关闭独立客户端。
+   逐请求超时仍经 ``Model.invoke(..., timeout=秒)`` 透传。
 2. openjiuwen 把所有底层异常包成
    ``openjiuwen.core.common.exception.errors.FrameworkError``，原始 openai SDK
    异常保留在 ``__cause__``（如 APITimeoutError / AuthenticationError）。判定
@@ -161,10 +160,9 @@ class GuardedModel:
         self._llm_timeout_seconds = llm_timeout_seconds
 
     async def invoke(self, messages, **kwargs):
-        """调用底层 Model；``timeout`` 等 kwargs 原样透传（逐请求超时唯一生效路径）。
+        """调用底层 Model；``timeout`` 等 kwargs 原样透传。
 
-        共享 HTTP 客户端缓存键不含 timeout，首个建连客户端的 timeout 会"赢"，
-        因此此处用实例配置超时做 setdefault 兜底；调用方显式传 timeout 仍优先。
+        用实例配置超时做 setdefault 兜底；调用方显式传 timeout 仍优先。
         """
         if self._llm_timeout_seconds is not None:
             kwargs.setdefault("timeout", self._llm_timeout_seconds)
@@ -246,10 +244,11 @@ def get_model(role: str = "report_generation", temperature: float | None = None,
 
     client_cfg = ModelClientConfig(
         client_provider="OpenAI", api_key=api_key, api_base=base_url,
-        # 仅首次建连生效（共享客户端缓存键不含 timeout）；逐请求超时走 invoke(timeout=...)
+        # 独立客户端避免报告线程关闭事件循环后污染主对话；超时也可逐请求覆盖
         timeout=settings.llm_timeout_seconds,
         # SDK 默认 3 次重试会把 429 限流放大成最多 4 倍实际请求，显式压低
         max_retries=settings.llm_max_retries,
+        use_shared_llm_http_client=False,
         verify_ssl=settings.llm_verify_ssl,
     )
     request_cfg = ModelRequestConfig(model_name=model, temperature=temperature)

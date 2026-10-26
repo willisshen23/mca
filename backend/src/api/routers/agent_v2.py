@@ -62,6 +62,37 @@ async def attach_run(thread_id: str, after: int = Query(default=0, ge=0)):
     return StreamingResponse(stream, media_type="text/event-stream")
 
 
+class AgentSteerRequest(BaseModel):
+    """任意时刻插话请求：打断当前 run，以 message 为新指令带 checkpoint 续跑。"""
+    thread_id: str
+    message: str
+    original_user_text: str = ""
+    user_id: str = ""
+    user_name: str = ""
+    org_no: str = ""
+    src_sys_no: str = ""
+    channel: str = ""
+
+
+@router.post("/steer")
+async def steer(body: AgentSteerRequest):
+    kwargs = dict(
+        thread_id=body.thread_id,
+        message=body.message,
+        original_user_text=body.original_user_text,
+        user_id=body.user_id,
+        user_name=body.user_name,
+        org_no=body.org_no,
+        src_sys_no=body.src_sys_no,
+        channel=body.channel,
+    )
+    stream = await v3_runtime.start_buffered_agent_steer(**kwargs)
+    return StreamingResponse(
+        stream,
+        media_type="text/event-stream",
+    )
+
+
 @router.post("/cancel")
 async def cancel(body: AgentCancelRequest):
     cancelled = v3_runtime.request_cancel(body.thread_id)

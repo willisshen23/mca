@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     agent_v2_fallback_llm_model: str = _agent_field("agent_v2_fallback", "model")
     agent_v2_fallback_llm_max_tokens: int = _agent_max_tokens_field("agent_v2_fallback")
     agent_v2_fallback_llm_temperature: float = _agent_temperature_field("agent_v2_fallback")
-    # agent_v2 历史摘要触发阈值（tokens，预留）
+    # 兼容旧 env；主对话压缩阈值由 AGENT_V3_CONTEXT_COMPRESSION_TOKENS_THRESHOLD 控制。
     agent_v2_summary_max_tokens: int = Field(default=120000, alias="AGENT_V2_SUMMARY_MAX_TOKENS")
     agent_v2_recursion_limit: int = Field(
         default=50,
@@ -136,6 +136,57 @@ class Settings(BaseSettings):
         default=50,
         ge=1,
         alias="AGENT_V3_MAX_ITERATIONS",
+    )
+    agent_v3_context_compression_enabled: bool = Field(
+        default=True,
+        alias="AGENT_V3_CONTEXT_COMPRESSION_ENABLED",
+    )
+    agent_v3_context_compression_tokens_threshold: int = Field(
+        default=120000,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_COMPRESSION_TOKENS_THRESHOLD",
+    )
+    agent_v3_context_compression_target_tokens: int = Field(
+        default=1800,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_COMPRESSION_TARGET_TOKENS",
+    )
+    agent_v3_context_messages_to_keep: int = Field(
+        default=20,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_MESSAGES_TO_KEEP",
+    )
+    agent_v3_context_offload_enabled: bool = Field(
+        default=True,
+        alias="AGENT_V3_CONTEXT_OFFLOAD_ENABLED",
+    )
+    agent_v3_context_offload_tokens_threshold: int = Field(
+        default=60000,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_OFFLOAD_TOKENS_THRESHOLD",
+    )
+    agent_v3_context_offload_large_message_threshold: int = Field(
+        default=4000,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_OFFLOAD_LARGE_MESSAGE_THRESHOLD",
+    )
+    agent_v3_context_offload_trim_size: int = Field(
+        default=500,
+        gt=0,
+        alias="AGENT_V3_CONTEXT_OFFLOAD_TRIM_SIZE",
+    )
+    agent_v3_context_reload_enabled: bool = Field(
+        default=True,
+        alias="AGENT_V3_CONTEXT_RELOAD_ENABLED",
+    )
+    agent_v3_context_workspace_dir: str = Field(
+        default="data/agent_workspace",
+        alias="AGENT_V3_CONTEXT_WORKSPACE_DIR",
+    )
+    agent_v3_context_window_rounds: int = Field(
+        default=20,
+        ge=0,
+        alias="AGENT_V3_CONTEXT_WINDOW_ROUNDS",
     )
     # 单次运行允许的工具调用总次数（ToolCallLimitRail 熔断阈值）
     agent_v3_max_tool_calls_per_run: int = Field(

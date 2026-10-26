@@ -11,7 +11,11 @@ from src.report_pipeline.capabilities.report_layout_guard import (
     normalize_content_card_layout,
     normalize_metric_card_layout,
 )
-from src.report_pipeline.capabilities.utils import extract_html_content, fix_echarts_scripts
+from src.report_pipeline.capabilities.utils import (
+    extract_html_content,
+    fix_echarts_scripts,
+    raise_if_run_cancelled,
+)
 from src.domain.report.html_template import strip_report_footer_note
 from src.llm import get_model
 from src.report_pipeline.state import AgentState
@@ -28,6 +32,7 @@ logger = logging.getLogger("activity-analysis.agent")
 
 
 async def marketing_report_synthesis_node(state: AgentState) -> dict:
+    raise_if_run_cancelled()  # 插话/停止后旧管线尽快中止，勿再烧 LLM 调用
     component_values = state.get("component_values") or {}
     outbound_data = state.get("outbound_activity_data") or {}
     report_values = outbound_data if state.get("workflow_mode") == "direct_outbound_report" else component_values
@@ -54,6 +59,10 @@ async def marketing_report_synthesis_node(state: AgentState) -> dict:
         report_sections=prompt_report_sections,
         report_data=prompt_report_data,
     )
+    # 用户指定主题色/标题（generate_report 的 report_theme 或插话里的样式要求）
+    # 必须覆盖提示词里写死的默认样式规格，否则两个指令冲突，LLM 每次只满足一个。
+    prompt_text = _apply_user_style_requirement(
+        prompt_text, state, activity_template_match, data_template_match)
     prompt_text += build_report_html_retry_instruction(state)
     create_report_run_history(state)
     update_prompt_text(state.get("request_id", ""), prompt_text)
@@ -83,6 +92,109 @@ async def marketing_report_synthesis_node(state: AgentState) -> dict:
         "report_history_enabled": False,
         "selected_report_activity_ids": [],
     }
+
+
+def _resolve_theme_spec(theme: str) -> str:
+    """把用户主题色归一化为带色号的样式规格，便于报告 LLM 直接落地。"""
+    specs = (
+        (("红", "red"), "红色（#C62828 为主色，#E53935、#B71C1C 作同色系层次）"),
+        (("蓝", "blue"), "深蓝/白（#1565C0 为主色，#1976D2、#0D47A1 作层次）"),
+        (("绿", "green"), "绿色（#2E7D32 为主色，#43A047、#1B5E20 作层次）"),
+        (("橙", "orange"), "橙色（#EF6C00 为主色，#F57C00、#E65100 作层次）"),
+        (("紫", "purple", "violet"), "紫色（#6A1B9A 为主色，#8E24AA、#4A148C 作层次）"),
+        (("黑", "black", "dark"), "深灰/黑金（#212121 为主色，#424242、#B8860B 点缀）"),
+    )
+    theme_lower = theme.lower()
+    for keys, spec in specs:
+        if any(k in theme or k in theme_lower for k in keys):
+            return spec
+    return f"以「{theme}」为灵感的主色调（自行选取协调的同色系色板）"
+
+
+def _extract_style_requirement(
+        user_text: str,
+        activity_template_match: dict[str, Any],
+        data_template_match: dict[str, Any],
+) -> dict[str, str]:
+    """提取用户指定的主题色与报告标题。
+
+    来源优先级：模板匹配 business_params（LLM 归纳）> 文本里
+    "报告主题色：X"（generate_report 工具参数确定性写入，见 report_gen
+    ._build_instruction）。无指定时返回空 dict，调用方保持默认样式。
+
+    user_text 传原始用户消息与管线 seed 指令的合并文本：seed 的
+    original_user_text 可能是裸用户消息，而"报告主题色：X"只出现在
+    seed.messages 的指令文本里，两处都要搜。
+    """
+    params: dict[str, Any] = {}
+    for match in (activity_template_match, data_template_match):
+        business_params = (match or {}).get("business_params")
+        if isinstance(business_params, dict):
+            params.update({k: v for k, v in business_params.items() if v})
+
+    theme = str(params.get("theme_color") or "").strip()
+    title = str(params.get("report_title") or "").strip()
+    if not theme:
+        m = re.search(r"报告主题色[:：]\s*([^；;，,]+)", user_text or "")
+        if m:
+            theme = m.group(1).strip()
+    return {"theme": theme, "title": title}
+
+
+def _combined_user_text(state: AgentState) -> str:
+    """合并裸用户消息与管线 seed 指令文本。
+
+    seed.original_user_text 可能是 run 的原始用户消息（插话场景即插话
+    内容本身），而 generate_report 工具参数确定性写入的"报告主题色：X"
+    只存在于 seed.messages 的指令文本里——两处都要作为提取来源。
+    """
+    parts = [_report_user_text(state)]
+    for message in state.get("messages") or []:
+        if isinstance(message, dict) and message.get("role") == "user":
+            content = str(message.get("content") or "")
+            if content:
+                parts.append(content)
+    return "\n".join(parts)
+
+
+def _apply_user_style_requirement(
+        prompt_text: str,
+        state: AgentState,
+        activity_template_match: dict[str, Any],
+        data_template_match: dict[str, Any],
+) -> str:
+    """用用户指定的主题色/标题覆盖提示词里写死的默认样式规格。
+
+    背景：MARKETING_REPORT_SYNTHESIS_PROMPT 的 HTML 技术规范写死
+    "深蓝/白主色调"，而用户经 report_theme/插话提出的主题色只在 user_text
+    里，两个指令冲突时 LLM 每次只满足一个（实测：红与改标题从未同时落地）。
+    有用户指定时替换默认规格；提示词被运行时覆盖改样导致替换不命中时，
+    追加显式覆盖块兜底。
+    """
+    req = _extract_style_requirement(
+        _combined_user_text(state), activity_template_match, data_template_match)
+    theme, title = req.get("theme", ""), req.get("title", "")
+    if not theme and not title:
+        return prompt_text
+
+    override_lines = []
+    if theme:
+        theme_spec = _resolve_theme_spec(theme)
+        default_spec = "深蓝/白主色调"
+        replaced = prompt_text.replace(default_spec, f"{theme_spec}主色调", 1)
+        if replaced != prompt_text:
+            prompt_text = replaced
+            logger.info("Agent2样式规格已按用户主题覆盖: theme=%s", theme)
+        else:
+            # 运行时提示词覆盖改样、默认规格文本不存在：追加显式覆盖块
+            override_lines.append(f"- 整体配色使用{theme_spec}主色调（覆盖上文任何默认配色要求）")
+    if title:
+        override_lines.append(
+            f"- 报告标题必须显示为「{title}」（<title> 标签与页面主标题 <h1> 保持一致）"
+        )
+    if override_lines:
+        prompt_text += "\n\n### 用户指定样式（优先级高于上述默认样式要求）\n" + "\n".join(override_lines)
+    return prompt_text
 
 
 def _fallback_html_report(state: AgentState) -> str:

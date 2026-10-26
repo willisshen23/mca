@@ -32,6 +32,7 @@ def test_get_model_passes_max_retries_to_client_config(monkeypatch):
     llm_mod.reset_model_cache()
     llm_mod.get_model("report_generation")
     assert seen["client_cfg"].max_retries == 1
+    assert seen["client_cfg"].use_shared_llm_http_client is False
 
 
 def _fake_session(monkeypatch):

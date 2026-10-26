@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import defer
 
 from src.config import get_settings, resolve_path
+from src.agent_v3.request_context import get_request_context
 from src.infrastructure.db.models import (
     ActivityAnalysisTemplate,
     AgentRunHistory,
@@ -349,6 +350,15 @@ def save_report_file(
     change_note: str | None = None,
 ) -> tuple[str, int | None]:
     """保存报告为新版本快照，返回 (asset_name, version_no)；失败返回 ("", None)。"""
+    # 插话/停止后被取消的旧 run，其管线可能仍跑到存库这一步：跳过写入，
+    # 否则每个后台续跑的 run 都会把一份约 1MB 的报告版本落库造成数据混乱。
+    cancel_event = get_request_context().get("cancel_event")
+    if cancel_event is not None and cancel_event.is_set():
+        logger.info(
+            "run_history report skipped: request_id=%s reason=cancelled",
+            request_id or "-",
+        )
+        return "", None
     if not request_id or not html_report:
         logger.warning(
             "run_history report skipped: request_id=%s reason=%s",

@@ -146,7 +146,7 @@ async function sendMsg() {
   const currentUploadedFile = uploadedFile.value;
   const selectedRows = [...props.chat.composerSelectedRows.value];
   if (!text && !currentUploadedFile?.file_path && selectedRows.length === 0) return;
-  if (props.conversation?.typing) return;
+  if (props.conversation?.typing && !text && selectedRows.length === 0) return;
   inputText.value = '';
   uploadedFile.value = null;
   uploadError.value = '';
@@ -280,10 +280,10 @@ defineExpose({
           ref="inputTextareaRef"
           v-model="inputText"
           class="deep-textarea"
-          placeholder="输入分析需求，或针对报告追问..."
+          placeholder="输入分析需求，执行中也可发送插话调整任务..."
           rows="1"
           :style="{ height: `${inputTextareaHeight}px` }"
-          :disabled="conversation?.typing || hasPendingApproval"
+          :disabled="hasPendingApproval"
           @keydown="handleKey"
         ></textarea>
         <div v-if="uploadedFile || uploadError" class="upload-status-row">
@@ -326,9 +326,8 @@ defineExpose({
         <div class="tool-group">
           <span v-if="hasPendingApproval" class="input-hint input-hint-stop">等待审批…</span>
           <span v-else-if="!conversation?.typing" class="input-hint">↵ 发送 · ⇧↵ 换行</span>
-          <span v-else class="input-hint input-hint-stop">执行中…</span>
+          <span v-else class="input-hint">↵ 发送插话 · ⇧↵ 换行</span>
           <button
-            v-if="!conversation?.typing"
             class="send-btn-circle"
             type="button"
             aria-label="发送"
@@ -338,7 +337,7 @@ defineExpose({
             <i class="ti ti-arrow-up" aria-hidden="true"></i>
           </button>
           <button
-            v-else
+            v-if="conversation?.typing"
             class="send-btn-circle stop-btn-circle"
             type="button"
             aria-label="停止"

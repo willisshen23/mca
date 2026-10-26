@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.report_pipeline.capabilities.utils import raise_if_run_cancelled
 
 import logging
 import re
@@ -16,6 +17,7 @@ logger = logging.getLogger("activity-analysis.agent")
 
 
 async def template_matching_node(state: AgentState) -> dict:
+    raise_if_run_cancelled()  # 插话/停止后旧管线尽快中止，勿再烧 LLM 调用
     activities = state.get("activity_list") or []
     templates = state.get("template_list") or []
     intent = state.get("marketing_intent") or {}

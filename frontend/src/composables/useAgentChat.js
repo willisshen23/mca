@@ -33,6 +33,7 @@ import {
 } from '@/api/conversations.js';
 import {
   runAgentV2,
+  steerAgentV2,
   cancelAgentV2,
   resumeAgentV2,
   getAgentV2RunStatus,
@@ -774,6 +775,24 @@ export function useAgentChat(options = {}) {
 
   const recoveringRunThreads = new Set();
 
+  // 会话当前流式消费的登记簿：token 单调递增，插话/新 run 使旧 token 失效，
+  // 旧流的 done/error/cancelled/断流重连等终态处理据此静默退出——否则旧 run
+  // 被打断后残留的 cancelled 帧会把 typing 清掉、并往消息列表塞"任务已取消"。
+  // controller 用于插话时中止旧 fetch（reader.read() 立即 reject）。
+  const runStreams = new Map();
+
+  function registerRunStream(conversationId) {
+    const prev = runStreams.get(conversationId);
+    const token = (prev?.token || 0) + 1;
+    const controller = new AbortController();
+    runStreams.set(conversationId, { token, controller });
+    return { token, controller };
+  }
+
+  function isStaleStream(conversationId, token) {
+    return runStreams.get(conversationId)?.token !== token;
+  }
+
   async function recoverAgentRun(conversation) {
     if (!conversation?.id || recoveringRunThreads.has(conversation.id)) return;
     recoveringRunThreads.add(conversation.id);
@@ -799,9 +818,10 @@ export function useAgentChat(options = {}) {
 
       removeStaleTransportFallback(conversation);
       conversation.typing = true;
+      const { token } = registerRunStream(conversation.id);
       const response = await attachAgentV2Run(conversation.id, after);
       if (!response.ok) throw new Error(`恢复任务失败：${response.status}`);
-      await consumeAgentStream(response, conversation, { recovery: true });
+      await consumeAgentStream(response, conversation, { recovery: true, token });
     } catch (e) {
       conversation.typing = false;
       console.warn('恢复正在执行的任务失败', e);
@@ -818,11 +838,13 @@ export function useAgentChat(options = {}) {
       if (!status?.exists || (!status.active && Number(status.last_seq || 0) <= after)) {
         return false;
       }
+      const { token } = registerRunStream(conversation.id);
       const response = await attachAgentV2Run(conversation.id, after);
       if (!response.ok) return false;
       await consumeAgentStream(response, conversation, {
         ...streamOptions,
         recovery: true,
+        token,
         reconnectAttempts: (streamOptions.reconnectAttempts || 0) + 1
       });
       return true;
@@ -835,6 +857,7 @@ export function useAgentChat(options = {}) {
   async function consumeAgentStream(response, conversation, streamOptions = {}) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    const streamToken = streamOptions.token;
     let buffer = '';
     const executionSteps = [];
     let pendingHtmlReport = '';
@@ -908,10 +931,12 @@ export function useAgentChat(options = {}) {
               persistConversation(conversation);
               options.onScroll?.(options.getConversation?.());
             } else if (event.type === 'approval_required') {
+              if (isStaleStream(conversation.id, streamToken)) return;
               conversation.typing = false;
               finishRunningThinking(conversation, { awaiting_approval: true });
               addApprovalRequest(event.payload, conversation);
             } else if (event.type === 'done') {
+              if (isStaleStream(conversation.id, streamToken)) return;
               const reply = event.payload?.final_response || '分析完成。';
               conversation.typing = false;
               if (event.payload?.report_html_guard_result?.valid === false) {
@@ -971,6 +996,7 @@ export function useAgentChat(options = {}) {
               }
               return;
             } else if (event.type === 'error') {
+              if (isStaleStream(conversation.id, streamToken)) return;
               conversation.typing = false;
               finishRunningThinking(conversation, event.payload || {});
               addMessage(
@@ -980,6 +1006,7 @@ export function useAgentChat(options = {}) {
               );
               return;
             } else if (event.type === 'cancelled') {
+              if (isStaleStream(conversation.id, streamToken)) return;
               conversation.typing = false;
               finishRunningThinking(conversation);
               addMessage('ai', '任务已取消。', conversation);
@@ -992,7 +1019,8 @@ export function useAgentChat(options = {}) {
       }
 
       // 未收到 done 就断流时，先尝试从服务端游标续接；刷新离开页面时不写错误消息。
-      if (pageUnloading) return;
+      // 流已被更新的 run/插话取代时静默退出——终态归新流处理。
+      if (pageUnloading || isStaleStream(conversation.id, streamToken)) return;
       if (await reconnectAgentStream(conversation, streamOptions)) return;
       conversation.typing = false;
       const fallbackRunningTrace = conversation.dynamicMessages.find((message) => (
@@ -1003,7 +1031,8 @@ export function useAgentChat(options = {}) {
       }
       addMessage('ai', SYSTEM_BUSY_MESSAGE, conversation, { transportFallback: true });
     } catch (e) {
-      if (pageUnloading) return;
+      // AbortError（插话中止旧 fetch）与失效流都静默退出，不写错误消息、不动 typing。
+      if (pageUnloading || isStaleStream(conversation.id, streamToken)) return;
       if (isTransportError(e) && await reconnectAgentStream(conversation, streamOptions)) return;
       conversation.typing = false;
       finishRunningThinking(conversation);
@@ -1018,7 +1047,11 @@ export function useAgentChat(options = {}) {
     const trimmedText = String(text || '').trim();
     const rows = [...(selectedRows || [])];
     if (!trimmedText && !uploadedFile?.file_path && rows.length === 0) return;
-    if (!conversation || conversation.typing) return;
+    if (!conversation) return;
+    // 任务执行中（typing）发送 = 插话：打断当前 run，以本条消息为新指令续跑。
+    // 插话仅支持纯文本/行选择（上传新文件意味着开新任务，执行中禁止上传）。
+    const steering = Boolean(conversation.typing);
+    if (steering && !trimmedText && rows.length === 0) return;
 
     const selectionText = rows.length ? `已选择第 ${rows.join('、')} 行` : '';
     const personalRequestText = trimmedText || (
@@ -1068,28 +1101,44 @@ export function useAgentChat(options = {}) {
       message.role === 'execution_trace' && message.status === 'running'
     ));
     if (staleRunningTrace) {
-      finishThinkingTrace(staleRunningTrace, { message: '前一次任务已中断' });
+      finishThinkingTrace(staleRunningTrace, {
+        message: steering ? '收到新指令，正在调整' : '前一次任务已中断'
+      });
     }
 
+    // 插话：先中止旧 fetch（旧流的 read 立即 reject，经 stale 检查静默退出），
+    // 再登记新 token——顺序不能反，否则旧流会先看到自己的 token 失效前就被 abort。
+    if (steering) {
+      runStreams.get(conversation.id)?.controller.abort();
+    }
+    const { token, controller } = registerRunStream(conversation.id);
+
     try {
-      const response = await runAgentV2({
+      const streamParams = {
         threadId: conversation.id,
         message: requestText,
         originalUserText: displayText || requestText,
-        filePath: uploadedFile?.file_path || '',
         userId: options.urlParams?.userId || getUserId(),
         userName: options.urlParams?.userName,
         orgNo: options.urlParams?.orgNo,
         srcSysNo: options.urlParams?.srcSysNo,
         channel: options.urlParams?.channel,
-        reportComponents
-      });
+        signal: controller.signal
+      };
+      const response = steering
+        ? await steerAgentV2(streamParams)
+        : await runAgentV2({
+            ...streamParams,
+            filePath: uploadedFile?.file_path || '',
+            reportComponents
+          });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.detail || `请求失败：${response.status}`);
       }
-      await consumeAgentStream(response, conversation);
+      await consumeAgentStream(response, conversation, { token });
     } catch (e) {
+      if (isStaleStream(conversation.id, token)) return;
       conversation.typing = false;
       finishRunningThinking(conversation);
       addMessage('ai', requestErrorMessage(e), conversation);
@@ -1127,6 +1176,7 @@ export function useAgentChat(options = {}) {
 
     conversation.typing = true;
     setRunSequence(conversation.id, 0);
+    const { token, controller } = registerRunStream(conversation.id);
     try {
       const response = await resumeAgentV2({
         threadId: conversation.id,
@@ -1138,7 +1188,8 @@ export function useAgentChat(options = {}) {
         userName: options.urlParams?.userName,
         orgNo: options.urlParams?.orgNo,
         srcSysNo: options.urlParams?.srcSysNo,
-        channel: options.urlParams?.channel
+        channel: options.urlParams?.channel,
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -1146,8 +1197,9 @@ export function useAgentChat(options = {}) {
         throw new Error(body.detail || `请求失败：${response.status}`);
       }
 
-      await consumeAgentStream(response, conversation, { isResume: true });
+      await consumeAgentStream(response, conversation, { isResume: true, token });
     } catch (e) {
+      if (isStaleStream(conversation.id, token)) return;
       conversation.typing = false;
       if (resumedTrace) {
         resumedTrace.status = 'paused';
